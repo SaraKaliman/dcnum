@@ -4,9 +4,7 @@
 |PyPI Version| |Build Status| |Coverage Status| |Docs Status|
 
 
-This is a Python library for the post-measurement analysis of
-real-time deformability cytometry (RT-DC) datasets; an essential part of
-`Shape-Out <https://github.com/ZELLMECHANIK-DRESDEN/ShapeOut2>`__.
+This is a Python library for postprocessing deformability cytometry data.
 
 Documentation
 -------------
