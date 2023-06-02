@@ -1,0 +1,7 @@
+# requirement on rtd
+h5py
+ipython
+matplotlib
+numpy
+sphinx==4.2.0
+sphinx_rtd_theme==1.0
