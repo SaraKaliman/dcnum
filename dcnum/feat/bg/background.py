@@ -133,10 +133,9 @@ class Background(abc.ABC):
 
         bg_ppid = self.get_ppid()
         # Write custom metadata
-        with h5py.File(self.h5out) as hw:
-            hw.attrs["user:dcevent ppid background"] = bg_ppid
-            hw.attrs["user:dcevent ppid generation"] = \
-                ppid.DCNUM_PPID_GENERATION
+        self.h5out.attrs["user:dcevent ppid background"] = bg_ppid
+        self.h5out.attrs["user:dcevent ppid generation"] = \
+            ppid.DCNUM_PPID_GENERATION
 
     @abc.abstractmethod
     def process_approach(self):
