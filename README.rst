@@ -4,7 +4,7 @@
 |PyPI Version| |Build Status| |Coverage Status| |Docs Status|
 
 
-This is a Python library for postprocessing deformability cytometry data.
+Numerics toolbox for imaging deformability cytometry.
 
 Documentation
 -------------
