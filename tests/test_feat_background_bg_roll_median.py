@@ -2,7 +2,7 @@ import h5py
 import numpy as np
 import pytest
 
-from dcnum.feat.bg import bg_roll_median
+from dcnum.feat.background import bg_roll_median
 
 
 def test_compute_median_for_slice():

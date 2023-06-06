@@ -8,7 +8,7 @@ import hdf5plugin
 import numpy as np
 from scipy import ndimage
 
-from .background import Background
+from .base import Background
 
 logger = logging.getLogger(__name__)
 
