@@ -37,8 +37,8 @@ def test_moments_based_features():
             pixel_size=0.2645
         )
         for feat in feats:
-            assert np.allclose(h5["events"][feat],
-                               data[feat])
+            assert np.allclose(h5["events"][feat][:],
+                               data[feat]), f"Feature {feat} mismatch!"
         # control test
-        assert not np.allclose(h5["events"]["inert_ratio_cvx"],
+        assert not np.allclose(h5["events"]["inert_ratio_cvx"][:],
                                data["tilt"])

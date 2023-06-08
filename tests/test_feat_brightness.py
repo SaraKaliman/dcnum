@@ -26,8 +26,8 @@ def test_basic_brightness():
                            -43.75497215592681,
                            atol=0, rtol=1e-10)
         for feat in brightness.brightness_names:
-            assert np.allclose(h5["events"][feat],
-                               data[feat])
+            assert np.allclose(h5["events"][feat][:],
+                               data[feat]), f"Feature {feat} mismatch!"
         # control test
-        assert not np.allclose(h5["events"]["bright_perc_10"],
+        assert not np.allclose(h5["events"]["bright_perc_10"][:],
                                data["bright_perc_90"])
