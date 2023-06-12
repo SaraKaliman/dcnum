@@ -13,7 +13,6 @@ from helper_methods import retrieve_data
 data_path = pathlib.Path(__file__).parent / "data"
 
 
-
 def test_segm_thresh_basic():
     """Basic thresholding segmenter
 

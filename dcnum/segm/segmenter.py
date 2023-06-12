@@ -5,7 +5,6 @@ import logging
 import multiprocessing as mp
 import time
 import threading
-from typing import Tuple
 
 import cv2
 import numpy as np
