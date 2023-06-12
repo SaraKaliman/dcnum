@@ -37,8 +37,18 @@ def test_moments_based_features():
             pixel_size=0.2645
         )
         for feat in feats:
+            idm = np.argmax(np.abs(data[feat] - h5["events"][feat][:]))
+            print("TEST", feat, idm, data[feat][idm], h5["events"][feat][idm])
+            if feat.count("inert"):
+                rtol = 0
+                atol = 1e-5
+            else:
+                rtol = 1e-5
+                atol = 1e-8
             assert np.allclose(h5["events"][feat][:],
-                               data[feat]), f"Feature {feat} mismatch!"
+                               data[feat],
+                               rtol=rtol,
+                               atol=atol), f"Feature {feat} mismatch!"
         # control test
         assert not np.allclose(h5["events"]["inert_ratio_cvx"][:],
                                data["tilt"])
