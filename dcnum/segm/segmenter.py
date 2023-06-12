@@ -234,19 +234,21 @@ class CPUSegmenter(Segmenter, abc.ABC):
 
     def __init__(self, *args, **kwargs):
         super(CPUSegmenter, self).__init__(*args, **kwargs)
-        self._image_raw = None
-        self._image_np = None
-        self._mask_raw = None
-        self._mask_np = None
-        self._workers = []
+        self._mp_image_raw = None
+        self._mp_image_np = None
+        self._mp_mask_raw = None
+        self._mp_mask_np = None
+        self._mp_workers = []
         # Processing control values
         # <-1: exit
         # -1: idle
         # 0: start
         # >0: this number workers finished a batch
-        self._status_batch = mp.Value("i", -1)
+        self._mp_batch_index = mp.Value("i", -1)
         # The iteration of the process (increment to wake workers)
-        self._status_iter = mp.Value("i", -1)
+        self._mp_batch_worker = mp.Value("i", 0)
+        # Tells the workers to stop
+        self._mp_shutdown = mp.Value("i", 0)
 
     def __getstate__(self):
         # Copy the object's state from self.__dict__ which contains
@@ -254,13 +256,9 @@ class CPUSegmenter(Segmenter, abc.ABC):
         # method to avoid modifying the original state.
         state = self.__dict__.copy()
         # Remove the unpicklable entries.
-        del state['_image_raw']
-        del state['_image_np']
-        del state['_mask_raw']
-        del state['_mask_np']
-        del state['_workers']
-        del state['_status_batch']
-        del state['_status_iter']
+        for key in list(state.keys()):
+            if key.startswith("_mp_"):
+                del state[key]
         return state
 
     def __setstate__(self, state):
@@ -292,37 +290,71 @@ class CPUSegmenter(Segmenter, abc.ABC):
 
     @property
     def image_array(self):
-        return self._image_np
+        return self._mp_image_np
 
     @property
     def mask_array(self):
-        return self._mask_np
+        return self._mp_mask_np
 
-    def segment_batch(self, image_data, start, stop, debug=False):
+    def join_workers(self):
+        """Ask all workers to stop and join them"""
+        if self._mp_workers:
+            self._mp_shutdown.value = 1
+            [w.join() for w in self._mp_workers]
+
+    def segment_batch(self,
+                      image_data: np.ndarray,
+                      start: int,
+                      stop: int,
+                      debug: bool = False):
+        """Perform batch segmentation of `image_data`
+
+        Parameters
+        ----------
+        image_data: 3d np.ndarray
+            The time-series image data. First axis is time.
+        start: int
+            First index to analyze in `image_data`
+        stop: int
+            Index after the last index to analyze in `image_data`
+        debug: bool
+            Whether to run this in debug mode (using a single thread)
+
+        Notes:
+        - If the segmentation algorithm only accepts background-corrected
+          images, then `image_data` must already be background-corrected.
+        """
         batch_size = stop - start
         image_shape = image_data[0].shape
         size = np.prod(image_data[0]) * batch_size
 
-        if self._image_np.size != size:
+        if self._mp_image_np is not None and self._mp_image_np.size != size:
             # reset image data
-            self._image_np = None
-            self._mask_np = None
+            self._mp_image_np = None
+            self._mp_mask_np = None
+            # TODO: If only the batch_size changes, don't
+            #  reinitialize the workers. Otherwise, the final rest of
+            #  analyzing a dataset would always take a little longer.
+            self.join_workers()
+            self._mp_workers = []
+            self._mp_batch_index.value = -1
+            self._mp_shutdown.value = 0
 
-        if self._image_np is None:
-            self._image_raw, self._image_np = self._create_shared_array(
+        if self._mp_image_np is None:
+            self._mp_image_raw, self._mp_image_np = self._create_shared_array(
                 image_shape=image_shape,
                 batch_size=batch_size,
                 dtype=np.ctypeslib.ctypes.c_int8,
             )
-        if self._mask_np is None:
-            self._mask_raw, self._mask_np = self._create_shared_array(
+        if self._mp_mask_np is None:
+            self._mp_mask_raw, self._mp_mask_np = self._create_shared_array(
                 image_shape=image_shape,
                 batch_size=batch_size,
                 dtype=np.ctypeslib.ctypes.c_bool,
             )
 
         # populate image data
-        self._image_np[:] = image_data[start:stop]
+        self._mp_image_np[:] = image_data[start:stop]
 
         # Create the workers
         if debug:
@@ -330,19 +362,21 @@ class CPUSegmenter(Segmenter, abc.ABC):
             num_workers = 1
         else:
             worker_cls = CPUSegmenterWorkerProcess
-            num_workers = self.num_processes
+            num_workers = min(self.num_processes or mp.cpu_count(),
+                              image_data.shape[0])
 
-        if not self._workers:
+        if not self._mp_workers:
             worker_args = [self,
-                           self._status_batch,
-                           self._status_iter,
-                           self._image_raw,
-                           self._mask_raw,
+                           self._mp_batch_index,
+                           self._mp_batch_worker,
+                           self._mp_shutdown,
+                           self._mp_image_raw,
+                           self._mp_mask_raw,
                            image_shape,
                            ]
 
-            step_size = size // num_workers
-            rest = size % 20
+            step_size = batch_size // num_workers
+            rest = batch_size % num_workers
             wstart = 0
             for ii in range(num_workers):
                 # Give every worker the same-sized workload and add one
@@ -354,65 +388,95 @@ class CPUSegmenter(Segmenter, abc.ABC):
                 args = worker_args + [wstart, wstop]
                 w = worker_cls(*args)
                 w.start()
-                self._workers.append(w)
+                self._mp_workers.append(w)
                 wstart = wstop
 
         # match iteration number with workers
-        self._status_iter.value += 1
+        self._mp_batch_index.value += 1
 
         # Tell workers to get going
-        self._status_batch.value = 0
+        self._mp_batch_worker.value = 0
 
-        while self._status_batch.value != num_workers:
+        # Wait for all workers to complete
+        while self._mp_batch_worker.value != num_workers:
             time.sleep(.1)
 
-        return self._mask_np
+        return self._mp_mask_np
 
 
 class CPUSegmenterWorker:
     def __init__(self,
                  segmenter: CPUSegmenter,
-                 status_batch: mp.Value,
-                 status_iter: mp.Value,
+                 batch_index: mp.Value,
+                 batch_worker: mp.Value,
+                 shutdown: mp.Value,
                  image_data: mp.RawArray,
                  mask_data: mp.RawArray,
                  image_shape: Tuple[int, int],
-                 start: int,
-                 stop: int,
+                 sl_start: int,
+                 sl_stop: int,
                  ):
+        """Worker process for CPU-based segmentation
+
+        Parameters
+        ----------
+        segmenter: CPUSegmenter
+            The segmentation instance
+        batch_index: mp.Value
+            Value incrementing the batch index. Starts with 0 and is
+            incremented every time :func:`Segmenter.segment_batch` is
+            called.
+        batch_worker: mp.Value
+            Value incrementing the number of workers that have finished
+            their part of the batch.
+        shutdown: mp.Value
+            Shutdown bit tells workers to stop when set to != 0
+        image_data: mp.RawArray
+            The image data for segmentation
+        mask_data: mp.RawArray
+            Boolean mask array
+        image_shape: tuple of ints
+            The shape of one image
+        sl_start: int
+            Start of slice of input array to process
+        sl_stop: int
+            Stop of slice of input array to process
+        """
+        # Must call super init, otherwise Thread or Process are not initialized
+        super(CPUSegmenterWorker, self).__init__()
         self.segmenter = segmenter
-        self.status_batch = status_batch
-        self.status_iter = status_iter
+        self.batch_index = batch_index
+        self.batch_worker = batch_worker
+        self.shutdown = shutdown
         self.image_data = np.ctypeslib.as_array(image_data).reshape(
             -1, image_shape[0], image_shape[1])
         self.mask_data = np.ctypeslib.as_array(mask_data).reshape(
             -1, image_shape[0], image_shape[1])
         self.image_shape = image_shape
-        self.start = start
-        self.stop = stop
+        self.sl_start = sl_start
+        self.sl_stop = sl_stop
 
     def run(self):
-        idx = self.start
-        itr = 0  # current iteration
-        bsize = self.stop - self.start
+        idx = self.sl_start
+        itr = 0  # current iteration (incremented when we reach self.sl_stop)
         while True:
-            correct_iter = self.status_iter.value == itr
-            status_batch = self.status_batch.value
-            if status_batch.value >= 0 and correct_iter:
-                self.mask_data[idx] = self.segmenter.segment_frame(
-                    self.image_data[idx])
-                idx += 1
-                if bsize == idx:
+            correct_iter = self.batch_index.value == itr
+            if correct_iter:
+                if idx == self.sl_stop:
                     # We finished processing everything.
                     itr += 1  # prevent running same things again
-                    idx = self.start  # reset counter for next batch
-                    with self.status_iter:
-                        self.status_iter.value += 1
-            elif status_batch == -1:
+                    idx = self.sl_start  # reset counter for next batch
+                    with self.batch_worker:
+                        self.batch_worker.value += 1
+                else:
+                    self.mask_data[idx] = self.segmenter.segment_frame(
+                        self.image_data[idx])
+                    idx += 1
+            elif self.shutdown.value:
+                break
+            else:
                 # Wait for more data to arrive
                 time.sleep(.03)
-            elif status_batch < -1:
-                break
 
 
 class CPUSegmenterWorkerProcess(CPUSegmenterWorker, mp.Process):

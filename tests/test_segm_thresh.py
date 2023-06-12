@@ -1,10 +1,11 @@
 import pathlib
 
+from dcnum import segm
+import h5py
 import numpy as np
 from skimage import morphology
 
-from dcnum import segm
-import h5py
+import pytest
 
 from helper_methods import retrieve_data
 
@@ -49,3 +50,68 @@ def test_segm_thresh_basic():
         # segmenter class as it would be part of gating.
         mask_seg = morphology.remove_small_objects(mask_seg, min_size=10)
         assert np.all(mask_seg == mask_u[ii]), f"masks not matching at {ii}"
+
+
+@pytest.mark.parametrize("worker_type", ["thread", "process"])
+def test_segm_thresh_segment_batch(worker_type):
+    debug = worker_type == "thread"
+    path = retrieve_data(
+        data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+
+    # Get all the relevant information
+    with h5py.File(path) as h5:
+        image = h5["events/image"][:]
+        image_bg = h5["events/image_bg"][:]
+        mask = h5["events/mask"][:]
+        frame = h5["events/frame"][:]
+
+    # Concatenate the masks
+    frame_u, indices = np.unique(frame, return_index=True)
+    image_u = image[indices]
+    image_bg_u = image_bg[indices]
+    mask_u = np.zeros_like(image_u, dtype=bool)
+    for ii, fr in enumerate(frame):
+        idx = np.where(frame_u == fr)[0]
+        mask_u[idx] = np.logical_or(mask_u[idx], mask[ii])
+
+    image_u_c = np.array(image_u, dtype=int) - image_bg_u
+
+    sm = segm.SegmentThresh(thresh=-6, kwargs_mask={"closing_disk": 3})
+
+    masks_seg = sm.segment_batch(image_u_c, start=0, stop=5, debug=debug)
+    assert masks_seg is sm.mask_array
+    # tell workers to stop
+    sm.join_workers()
+
+    for ii in range(len(frame_u)):
+        mask_seg = masks_seg[ii]
+        # Remove small objects, because this is not implemented in the
+        # segmenter class as it would be part of gating.
+        mask_seg = morphology.remove_small_objects(mask_seg, min_size=10)
+        assert np.all(mask_seg == mask_u[ii]), f"masks not matching at {ii}"
+
+
+@pytest.mark.parametrize("worker_type", ["thread", "process"])
+def test_segm_thresh_segment_batch_large(worker_type):
+    debug = worker_type == "thread"
+
+    # Create fake data
+    mask = np.zeros((121, 80, 200), dtype=bool)
+    mask[:, 10:71, 100:161] = morphology.disk(30).reshape(-1, 61, 61)
+    image = -10 * mask
+
+    sm = segm.SegmentThresh(thresh=-6, kwargs_mask={"closing_disk": 3})
+
+    masks_seg_1 = sm.segment_batch(image, start=0, stop=101, debug=debug)
+    masks_seg_2 = sm.segment_batch(image, start=101, stop=121, debug=debug)
+
+    # tell workers to stop
+    sm.join_workers()
+
+    for ii in range(101):
+        mask_seg = masks_seg_1[ii]
+        assert np.all(mask_seg == mask[ii]), f"masks not matching at {ii}"
+
+    for jj in range(101, 121):
+        mask_seg = masks_seg_2[jj - 101]
+        assert np.all(mask_seg == mask[jj]), f"masks not matching at {jj}"
