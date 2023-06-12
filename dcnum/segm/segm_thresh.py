@@ -9,7 +9,7 @@ class SegmentThresh(CPUSegmenter):
         "closing_disk": 2,
     }
 
-    def __init__(self, thresh=None, *args, **kwargs):
+    def __init__(self, thresh=-6, *args, **kwargs):
         """Simple image thresholding segmentation
 
         Parameters

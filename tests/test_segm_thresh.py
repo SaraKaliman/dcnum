@@ -13,6 +13,7 @@ from helper_methods import retrieve_data
 data_path = pathlib.Path(__file__).parent / "data"
 
 
+
 def test_segm_thresh_basic():
     """Basic thresholding segmenter
 
@@ -103,17 +104,21 @@ def test_segm_thresh_segment_batch_large(worker_type):
 
     sm = segm.SegmentThresh(thresh=-6, kwargs_mask={"closing_disk": 3})
 
-    masks_seg_1 = sm.segment_batch(image, start=0, stop=101, debug=debug)
-    assert sm._mp_batch_index.value == 0
+    masks_seg_1 = np.copy(
+        sm.segment_batch(image, start=0, stop=101, debug=debug))
+
+    assert sm.mp_batch_index.value == 0
     if worker_type == "thread":
         assert len(sm._mp_workers) == 1
-        assert sm._mp_batch_worker.value == 1
+        assert sm.mp_batch_worker.value == 1
     else:
         # This will fail if you have too many CPUs in your system
         assert len(sm._mp_workers) == mp.cpu_count()
         # Check whether all processes did their deeds
-        assert sm._mp_batch_worker.value == mp.cpu_count()
-    masks_seg_2 = sm.segment_batch(image, start=101, stop=121, debug=debug)
+        assert sm.mp_batch_worker.value == mp.cpu_count()
+
+    masks_seg_2 = np.copy(
+        sm.segment_batch(image, start=101, stop=121, debug=debug))
 
     # tell workers to stop
     sm.join_workers()

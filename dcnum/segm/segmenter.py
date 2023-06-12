@@ -234,31 +234,37 @@ class CPUSegmenter(Segmenter, abc.ABC):
 
     def __init__(self, *args, **kwargs):
         super(CPUSegmenter, self).__init__(*args, **kwargs)
-        self._mp_image_raw = None
+        self.mp_image_raw = None
         self._mp_image_np = None
-        self._mp_mask_raw = None
+        self.mp_mask_raw = None
         self._mp_mask_np = None
         self._mp_workers = []
+        # Image shape of the input array
+        self.image_shape = None
         # Processing control values
         # <-1: exit
         # -1: idle
         # 0: start
         # >0: this number workers finished a batch
-        self._mp_batch_index = mp.Value("i", -1)
+        self.mp_batch_index = mp.Value("i", -1)
         # The iteration of the process (increment to wake workers)
-        self._mp_batch_worker = mp.Value("i", 0)
+        self.mp_batch_worker = mp.Value("i", 0)
         # Tells the workers to stop
-        self._mp_shutdown = mp.Value("i", 0)
+        self.mp_shutdown = mp.Value("i", 0)
 
     def __getstate__(self):
         # Copy the object's state from self.__dict__ which contains
         # all our instance attributes. Always use the dict.copy()
         # method to avoid modifying the original state.
+        # This is important when using "spawn" to create new processes,
+        # because then the entire object gets pickled and some things
+        # cannot be pickled!
         state = self.__dict__.copy()
         # Remove the unpicklable entries.
-        for key in list(state.keys()):
-            if key.startswith("_mp_"):
-                del state[key]
+        del state["logger"]
+        del state["_mp_image_np"]
+        del state["_mp_mask_np"]
+        del state["_mp_workers"]
         return state
 
     def __setstate__(self, state):
@@ -299,7 +305,7 @@ class CPUSegmenter(Segmenter, abc.ABC):
     def join_workers(self):
         """Ask all workers to stop and join them"""
         if self._mp_workers:
-            self._mp_shutdown.value = 1
+            self.mp_shutdown.value = 1
             [w.join() for w in self._mp_workers]
 
     def segment_batch(self,
@@ -320,13 +326,16 @@ class CPUSegmenter(Segmenter, abc.ABC):
         debug: bool
             Whether to run this in debug mode (using a single thread)
 
-        Notes:
+        Notes
+        -----
         - If the segmentation algorithm only accepts background-corrected
           images, then `image_data` must already be background-corrected.
         """
         batch_size = stop - start
-        image_shape = image_data[0].shape
         size = np.prod(image_data[0]) * batch_size
+
+        if self.image_shape is None:
+            self.image_shape = image_data[0].shape
 
         if self._mp_image_np is not None and self._mp_image_np.size != size:
             # reset image data
@@ -337,18 +346,19 @@ class CPUSegmenter(Segmenter, abc.ABC):
             #  analyzing a dataset would always take a little longer.
             self.join_workers()
             self._mp_workers = []
-            self._mp_batch_index.value = -1
-            self._mp_shutdown.value = 0
+            self.mp_batch_index.value = -1
+            self.mp_shutdown.value = 0
 
         if self._mp_image_np is None:
-            self._mp_image_raw, self._mp_image_np = self._create_shared_array(
-                image_shape=image_shape,
+            self.mp_image_raw, self._mp_image_np = self._create_shared_array(
+                image_shape=self.image_shape,
                 batch_size=batch_size,
                 dtype=np.ctypeslib.ctypes.c_int8,
             )
+
         if self._mp_mask_np is None:
-            self._mp_mask_raw, self._mp_mask_np = self._create_shared_array(
-                image_shape=image_shape,
+            self.mp_mask_raw, self._mp_mask_np = self._create_shared_array(
+                image_shape=self.image_shape,
                 batch_size=batch_size,
                 dtype=np.ctypeslib.ctypes.c_bool,
             )
@@ -366,15 +376,6 @@ class CPUSegmenter(Segmenter, abc.ABC):
                               image_data.shape[0])
 
         if not self._mp_workers:
-            worker_args = [self,
-                           self._mp_batch_index,
-                           self._mp_batch_worker,
-                           self._mp_shutdown,
-                           self._mp_image_raw,
-                           self._mp_mask_raw,
-                           image_shape,
-                           ]
-
             step_size = batch_size // num_workers
             rest = batch_size % num_workers
             wstart = 0
@@ -385,20 +386,20 @@ class CPUSegmenter(Segmenter, abc.ABC):
                 if rest:
                     wstop += 1
                     rest -= 1
-                args = worker_args + [wstart, wstop]
+                args = [self, wstart, wstop]
                 w = worker_cls(*args)
                 w.start()
                 self._mp_workers.append(w)
                 wstart = wstop
 
         # Match iteration number with workers
-        self._mp_batch_index.value += 1
+        self.mp_batch_index.value += 1
 
         # Tell workers to get going
-        self._mp_batch_worker.value = 0
+        self.mp_batch_worker.value = 0
 
         # Wait for all workers to complete
-        while self._mp_batch_worker.value != num_workers:
+        while self.mp_batch_worker.value != num_workers:
             time.sleep(.1)
 
         return self._mp_mask_np
@@ -406,13 +407,7 @@ class CPUSegmenter(Segmenter, abc.ABC):
 
 class CPUSegmenterWorker:
     def __init__(self,
-                 segmenter: CPUSegmenter,
-                 batch_index: mp.Value,
-                 batch_worker: mp.Value,
-                 shutdown: mp.Value,
-                 image_data: mp.RawArray,
-                 mask_data: mp.RawArray,
-                 image_shape: Tuple[int, int],
+                 segmenter,
                  sl_start: int,
                  sl_stop: int,
                  ):
@@ -422,21 +417,6 @@ class CPUSegmenterWorker:
         ----------
         segmenter: CPUSegmenter
             The segmentation instance
-        batch_index: mp.Value
-            Value incrementing the batch index. Starts with 0 and is
-            incremented every time :func:`Segmenter.segment_batch` is
-            called.
-        batch_worker: mp.Value
-            Value incrementing the number of workers that have finished
-            their part of the batch.
-        shutdown: mp.Value
-            Shutdown bit tells workers to stop when set to != 0
-        image_data: mp.RawArray
-            The image data for segmentation
-        mask_data: mp.RawArray
-            Boolean mask array
-        image_shape: tuple of ints
-            The shape of one image
         sl_start: int
             Start of slice of input array to process
         sl_stop: int
@@ -445,18 +425,33 @@ class CPUSegmenterWorker:
         # Must call super init, otherwise Thread or Process are not initialized
         super(CPUSegmenterWorker, self).__init__()
         self.segmenter = segmenter
-        self.batch_index = batch_index
-        self.batch_worker = batch_worker
-        self.shutdown = shutdown
-        self.image_data = np.ctypeslib.as_array(image_data).reshape(
-            -1, image_shape[0], image_shape[1])
-        self.mask_data = np.ctypeslib.as_array(mask_data).reshape(
-            -1, image_shape[0], image_shape[1])
-        self.image_shape = image_shape
+        # Value incrementing the batch index. Starts with 0 and is
+        # incremented every time :func:`Segmenter.segment_batch` is
+        # called.
+        self.batch_index = segmenter.mp_batch_index
+        # Value incrementing the number of workers that have finished
+        # their part of the batch.
+        self.batch_worker = segmenter.mp_batch_worker
+        # Shutdown bit tells workers to stop when set to != 0
+        self.shutdown = segmenter.mp_shutdown
+        # The image data for segmentation
+        self.image_data_raw = segmenter.mp_image_raw
+        # Boolean mask array
+        self.mask_data_raw = segmenter.mp_mask_raw
+        # The shape of one image
+        self.image_shape = segmenter.image_shape
         self.sl_start = sl_start
         self.sl_stop = sl_stop
 
     def run(self):
+        # We have to create the numpy-versions of the mp.RawArrays here,
+        # otherwise we only get some kind of copy in the new process
+        # when we use "spawn" instead of "fork".
+        mask_data = np.ctypeslib.as_array(self.mask_data_raw).reshape(
+            -1, self.image_shape[0], self.image_shape[1])
+        image_data = np.ctypeslib.as_array(self.image_data_raw).reshape(
+            -1, self.image_shape[0], self.image_shape[1])
+
         idx = self.sl_start
         itr = 0  # current iteration (incremented when we reach self.sl_stop)
         while True:
@@ -469,8 +464,8 @@ class CPUSegmenterWorker:
                     with self.batch_worker:
                         self.batch_worker.value += 1
                 else:
-                    self.mask_data[idx] = self.segmenter.segment_frame(
-                        self.image_data[idx])
+                    mask_data[idx, :, :] = self.segmenter.segment_frame(
+                        image_data[idx])
                     idx += 1
             elif self.shutdown.value:
                 break
@@ -480,8 +475,8 @@ class CPUSegmenterWorker:
 
 
 class CPUSegmenterWorkerProcess(CPUSegmenterWorker, mp.Process):
-    def __init__(self, *args):
-        super(CPUSegmenterWorkerProcess, self).__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super(CPUSegmenterWorkerProcess, self).__init__(*args, **kwargs)
 
 
 class CPUSegmenterWorkerThread(CPUSegmenterWorker, threading.Thread):
