@@ -92,8 +92,6 @@ class BackgroundRollMed(Background):
             self.shared_output_raw).reshape(batch_size, -1)
         #: current batch index (see `self.process` and `process_next_batch`)
         self.current_batch = 0
-        #: multiprocessing pool for parallel processing
-        self.pool = mp.Pool(processes=self.num_cpus)
 
         #: counter tracking process of workers
         self.worker_counter = mp.Value("l", 0)
@@ -137,8 +135,6 @@ class BackgroundRollMed(Background):
             self.h5out.close()
         self.worker_counter.value = -1000
         [w.join() for w in self.workers]
-        self.pool.terminate()
-        self.pool.join()
 
     @staticmethod
     def check_user_kwargs(*,
