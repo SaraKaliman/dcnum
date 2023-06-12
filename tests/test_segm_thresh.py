@@ -42,7 +42,7 @@ def test_segm_thresh_basic():
 
     image_u_c = np.array(image_u, dtype=int) - image_bg_u
 
-    sm = segm.SegmentThreshold(thresh=-6, kwargs_mask={"closing_disk": 3})
+    sm = segm.SegmentThresh(thresh=-6, kwargs_mask={"closing_disk": 3})
     for ii in range(len(frame_u)):
         mask_seg = sm.segment_frame(image_u_c[ii])
         # Remove small objects, because this is not implemented in the

@@ -2,7 +2,7 @@
 import functools
 
 from .segmenter import Segmenter
-from .segm_thresh import SegmentThreshold
+from .segm_thresh import SegmentThresh
 
 
 @functools.cache

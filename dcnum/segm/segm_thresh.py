@@ -1,12 +1,12 @@
 from .segmenter import CPUSegmenter
 
 
-class SegmentThreshold(CPUSegmenter):
+class SegmentThresh(CPUSegmenter):
     mask_postprocessing = True
     mask_default_kwargs = {
         "clear_border": True,
         "fill_holes": True,
-        "closing_disk": 0,
+        "closing_disk": 2,
     }
 
     def __init__(self, thresh=None, *args, **kwargs):
@@ -15,7 +15,7 @@ class SegmentThreshold(CPUSegmenter):
         Parameters
         ----------
         """
-        super(SegmentThreshold, self).__init__(thresh=thresh, *args, **kwargs)
+        super(SegmentThresh, self).__init__(thresh=thresh, *args, **kwargs)
 
     @staticmethod
     def segment_approach(image, *,
