@@ -391,7 +391,7 @@ class CPUSegmenter(Segmenter, abc.ABC):
                 self._mp_workers.append(w)
                 wstart = wstop
 
-        # match iteration number with workers
+        # Match iteration number with workers
         self._mp_batch_index.value += 1
 
         # Tell workers to get going
