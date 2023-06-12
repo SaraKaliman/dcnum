@@ -22,6 +22,9 @@ class HDF5Data:
                            "logs": logs,
                            "tables": tables})
 
+    def __contains__(self, item):
+        return item in self.keys()
+
     def __enter__(self):
         return self
 
@@ -61,12 +64,12 @@ class HDF5Data:
             # get dataset configuration
             with h5py.File(self.path) as h5:
                 self.meta = dict(h5.attrs)
-                for key in h5["logs"]:
+                for key in h5.get("logs", []):
                     alog = list(h5["logs"][key])
                     if isinstance(alog[0], bytes):
                         alog = [ll.decode("utf") for ll in alog]
                     self.logs[key] = alog
-                for tab in h5["tables"]:
+                for tab in h5.get("tables", []):
                     self.tables[tab] = h5["tables"][key][:]
 
         if state["pixel_size"] is not None:
@@ -84,9 +87,10 @@ class HDF5Data:
         self.h5 = h5py.File(self.path, libver="latest")
         self.image = HDF5ImageCache(self.h5["events/image"])
 
-        if "events/image_bg" not in self.h5:
-            raise ValueError(f"No background image data for {self.path}!")
-        self.image_bg = HDF5ImageCache(self.h5["events/image_bg"])
+        if "events/image_bg" in self.h5:
+            self.image_bg = HDF5ImageCache(self.h5["events/image_bg"])
+        else:
+            self.image_bg = None
 
         if "events/mask" in self.h5:
             self.mask = HDF5ImageCache(self.h5["events/mask"],
@@ -109,6 +113,7 @@ class HDF5Data:
     def __len__(self):
         return self.h5.attrs["experiment:event count"]
 
+    @functools.cache
     def keys(self):
         return sorted(self.h5["/events"].keys())
 

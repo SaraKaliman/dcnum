@@ -1,0 +1,109 @@
+import pathlib
+import pickle
+
+import h5py
+import numpy as np
+
+from dcnum import read
+
+from helper_methods import retrieve_data
+
+data_path = pathlib.Path(__file__).parent / "data"
+
+
+def test_image_cache(tmp_path):
+    path = tmp_path / "test.hdf5"
+    with h5py.File(path, "w") as hw:
+        hw["events/image"] = np.random.rand(210, 80, 180)
+
+    with h5py.File(path, "r") as h5:
+        hic = read.HDF5ImageCache(h5["events/image"],
+                                  chunk_size=100,
+                                  cache_size=2)
+
+        # Get something from the first chunk
+        assert np.allclose(hic[10], h5["events/image"][10])
+        assert len(hic.cache) == 1
+        assert 0 in hic.cache
+
+        # Get something from the last chunk
+        assert np.allclose(hic[205], h5["events/image"][205])
+        assert len(hic.cache) == 2
+        assert 0 in hic.cache
+        assert 2 in hic.cache
+        assert np.allclose(hic.cache[2], h5["events/image"][200:])
+
+        # Get something from the first chunk again
+        assert np.allclose(hic[90], h5["events/image"][90])
+        assert len(hic.cache) == 2
+        assert 0 in hic.cache
+        assert 2 in hic.cache
+
+        # Get something from the middle chunk
+        assert np.allclose(hic[140], h5["events/image"][140])
+        assert len(hic.cache) == 2  # limited to two
+        assert 0 not in hic.cache  # first item gets removed
+        assert 1 in hic.cache
+        assert 2 in hic.cache
+
+
+def test_pixel_size_getset(tmp_path):
+    path = tmp_path / "test.hdf5"
+    with h5py.File(path, "w") as hw:
+        hw["events/image"] = np.random.rand(10, 80, 180)
+        hw.attrs["imaging:pixel size"] = 0.123
+
+    h5dat = read.HDF5Data(path)
+    assert np.allclose(h5dat.pixel_size, 0.123)
+    h5dat.pixel_size = 0.321
+    assert np.allclose(h5dat.pixel_size, 0.321)
+
+
+def test_open_real_data():
+    path = retrieve_data(data_path /
+                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    with read.HDF5Data(path) as h5dat:  # context manager
+        # properties
+        assert len(h5dat) == 40
+        assert h5dat.md5_5m == "599c8c7a112632d007be60b9c37961c5"
+
+        # scalar features
+        fsc = h5dat.features_scalar_frame
+        exp = ['bg_med', 'frame', 'time']
+        assert set(fsc) == set(exp)
+
+        # feature names
+        assert len(h5dat.keys()) == 48
+        assert "deform" in h5dat.keys()
+        assert "deform" in h5dat
+
+
+def test_pickling_state():
+    path = retrieve_data(data_path /
+                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+
+    h5d1 = read.HDF5Data(path)
+    h5d1.pixel_size = 0.124
+    state = h5d1.__getstate__()
+    pstate = pickle.dumps(state)
+
+    state2 = pickle.loads(pstate)
+    h5d2 = read.HDF5Data(**state2)
+    assert h5d1.md5_5m == h5d2.md5_5m
+    assert h5d1.md5_5m == h5d2.md5_5m
+    assert h5d1.pixel_size == h5d2.pixel_size
+    assert np.allclose(h5d2.pixel_size, 0.124)
+
+
+def test_pickling_state_logs():
+    path = retrieve_data(
+        data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    h5d1 = read.HDF5Data(path)
+    h5d1.pixel_size = 0.124
+    state = h5d1.__getstate__()
+    pstate = pickle.dumps(state)
+
+    state2 = pickle.loads(pstate)
+    h5d2 = read.HDF5Data(**state2)
+    for lk in h5d1.logs:
+        assert h5d1.logs[lk] == h5d2.logs[lk]
