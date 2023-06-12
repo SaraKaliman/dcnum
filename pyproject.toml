@@ -36,6 +36,7 @@ dependencies = [
     "numba",  # BSD
     "numpy>=1.21",  # BSD
     "opencv-python-headless",  # Apache 2.0
+    "scikit-image",  # BSD
     "scipy>=1.8.0",  # BSD
 ]
 dynamic = ["version"]
