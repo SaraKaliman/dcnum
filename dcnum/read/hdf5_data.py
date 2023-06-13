@@ -1,7 +1,15 @@
+from __future__ import annotations
+
 import functools
+import io
+import pathlib
+import tempfile
+from typing import List
+import uuid
 import warnings
 
 import h5py
+import numpy as np
 
 from .cache import HDF5ImageCache, ImageCorrCache, md5sum
 from .const import PROTECTED_FEATURES
@@ -53,8 +61,11 @@ class HDF5Data:
 
         self.md5_5m = state["md5_5m"]
         if self.md5_5m is None:
-            # 5MB md5sum of input file
-            self.md5_5m = md5sum(self.path, count=80)
+            if isinstance(self.path, pathlib.Path):
+                # 5MB md5sum of input file
+                self.md5_5m = md5sum(self.path, count=80)
+            else:
+                self.md5_5m = str(uuid.uuid4()).replace("-", "")
         self.logs = state["logs"]
         self.tables = state["tables"]
         self.meta = state["meta"]
@@ -151,3 +162,132 @@ class HDF5Data:
             if feat in PROTECTED_FEATURES:
                 feats.append(feat)
         return feats
+
+
+def concatenated_hdf5_data(paths: List[pathlib.Path],
+                           path_out: True | pathlib.Path | None = True,
+                           compute_frame: bool = True,
+                           features: List[str] | None = None):
+    """Return a virtual dataset concatenating all the input paths
+
+    Parameters
+    ----------
+    paths:
+        Path of the input HDF5 files that will be concatenated along
+        the feature axis. The metadata will be taken from the first
+        file.
+    path_out:
+        If `None`, then the dataset is created in memory. If `True`
+        (default), create a file on disk. If a pathlib.Path is specified,
+        the dataset is written to that file. Note that files in memory
+        are liekely not pickable (so don't use for multiprocessing).
+    compute_frame:
+        Whether to compute the "events/frame" feature, taking the frame
+        data from the input files and properly incrementing them along
+        the file index.
+    features:
+        List of features to take from the input files.
+
+    Notes
+    -----
+    - If one of the input files does not contain a feature from the first
+      input `paths`, then a `ValueError` is raised. Use the `features`
+      argument to specify which features you need instead.
+    """
+    h5kwargs = {"mode": "w", "libver": "latest"}
+    if isinstance(path_out, (pathlib.Path, str)):
+        h5kwargs["name"] = path_out
+    elif path_out is True:
+        tf = tempfile.NamedTemporaryFile(prefix="dcnum_vc_",
+                                         suffix=".hdf5",
+                                         delete=False)
+        tf.write(b"dummy")
+        h5kwargs["name"] = tf.name
+        tf.close()
+    elif path_out is None:
+        h5kwargs["name"] = io.BytesIO()
+    else:
+        raise ValueError(
+            f"Invalid type for `path_out`: {type(path_out)} ({path_out}")
+
+    if len(paths) <= 1:
+        raise ValueError("Please specify at least two files in `paths`!")
+
+    frames = []
+
+    with h5py.File(**h5kwargs) as hv:
+        # determine the sizes of the input files
+        shapes = {}
+        dtypes = {}
+        size = 0
+        for ii, pp in enumerate(paths):
+            pp = pathlib.Path(pp).resolve()
+            with h5py.File(pp, libver="latest") as h5:
+                # get all feature keys
+                featsi = sorted(h5["events"].keys())
+                # get metadata
+                if ii == 0:
+                    meta = dict(h5.attrs)
+                    features = featsi
+                # make sure number of features are consistent
+                if not set(features) <= set(featsi):
+                    raise ValueError(
+                        f"File {pp} contains more features than {paths[0]}!")
+                # populate shapes for all features
+                for feat in features:
+                    if not isinstance(h5["events"][feat], h5py.Dataset):
+                        warnings.warn(
+                            f"Ignoring {feat}; not implemented yet!")
+                    if feat in ["frame", "time"]:
+                        continue
+                    shapes.setdefault(feat, []).append(
+                        h5["events"][feat].shape)
+                    if ii == 0:
+                        dtypes[feat] = h5["events"][feat].dtype
+                # increment size
+                size += h5["events"][features[0]].shape[0]
+                # remember the frame feature if requested
+                if compute_frame:
+                    frames.append(h5["events/frame"][:])
+
+        # write metadata
+        hv.attrs.update(meta)
+
+        # Create the virtual datasets
+        for feat in shapes:
+            if len(shapes[feat][0]) == 1:
+                # scalar feature
+                shape = (sum([sh[0] for sh in shapes[feat]]))
+            else:
+                # non-scalar feature
+                length = (sum([sh[0] for sh in shapes[feat]]))
+                shape = list(shapes[feat][0])
+                shape[0] = length
+                shape = tuple(shape)
+            layout = h5py.VirtualLayout(shape=shape, dtype=dtypes[feat])
+            loc = 0
+            for jj, pp in enumerate(paths):
+                vsource = h5py.VirtualSource(pp, f"events/{feat}",
+                                             shape=shapes[feat][jj])
+                cursize = shapes[feat][jj][0]
+                layout[loc:loc+cursize] = vsource
+                loc += cursize
+            hv.create_virtual_dataset(f"/events/{feat}", layout, fillvalue=0)
+
+        if compute_frame:
+            # concatenate frames and store in dataset
+            frame_concat = np.zeros(size, dtype=np.uint64)
+            locf = 0  # indexing location
+            prevmax = 0  # maximum frame number stored so far in array
+            for fr in frames:
+                offset = prevmax + 1 - fr[0]
+                frame_concat[locf:locf+fr.size] = fr + offset
+                locf += fr.size
+                prevmax = fr[-1] + offset
+            hv.create_dataset("/events/frame", data=frame_concat)
+
+        # write metadata
+        hv.attrs["experiment:event count"] = size
+
+    data = HDF5Data(h5kwargs["name"])
+    return data
