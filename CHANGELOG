@@ -1,5 +1,6 @@
 0.0.4
  - feat: introduce HDF5 virtual dataset path concatenator
+ - enh: allow to pass h5py.File object to HDF5Data
  - fix: typo in logging statement for sparse median bg computation
 0.0.3
  - feat: introduce median background computation

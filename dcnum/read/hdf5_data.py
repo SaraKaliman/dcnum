@@ -21,7 +21,11 @@ class HDF5Data:
                  md5_5m=None, meta=None, logs=None, tables=None):
         # Init is in __setstate__ so we can pickle this class
         # and use it for multiprocessing.
-        self.h5 = None  # is set in __setstate__
+        if isinstance(path, h5py.File):
+            self.h5 = path
+            path = path.filename
+        else:
+            self.h5 = None  # is set in __setstate__
         self._cache_scalar = {}
         self.__setstate__({"path": path,
                            "pixel_size": pixel_size,
@@ -37,7 +41,7 @@ class HDF5Data:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.h5.close()
+        self.close()
 
     def __getitem__(self, feat):
         if feat == "image":
@@ -95,7 +99,8 @@ class HDF5Data:
                 # Set default pixel size for Rivercyte devices
                 self.pixel_size = 0.2645
 
-        self.h5 = h5py.File(self.path, libver="latest")
+        if self.h5 is None:
+            self.h5 = h5py.File(self.path, libver="latest")
         self.image = HDF5ImageCache(self.h5["events/image"])
 
         if "events/image_bg" in self.h5:
@@ -143,6 +148,10 @@ class HDF5Data:
     @pixel_size.setter
     def pixel_size(self, pixel_size):
         self.meta["imaging:pixel size"] = pixel_size
+
+    def close(self):
+        """Close the underlying HDF5 file"""
+        self.h5.close()
 
     @functools.cache
     def keys(self):
