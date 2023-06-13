@@ -1,5 +1,8 @@
 0.0.3
  - feat: introduce median background computation
+ - feat: introduce data reader
+ - feat: introduce thresholding segmenter
+ - feat: introduce brightness, haralick texture, and moments-based features
 0.0.2
  - first automated release
 0.0.1
