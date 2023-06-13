@@ -4,7 +4,7 @@ import functools
 import io
 import pathlib
 import tempfile
-from typing import List
+from typing import Dict, BinaryIO, List
 import uuid
 import warnings
 
@@ -17,8 +17,15 @@ from .const import PROTECTED_FEATURES
 
 class HDF5Data:
     """HDF5 (.rtdc) input file data instance"""
-    def __init__(self, path, pixel_size=None,
-                 md5_5m=None, meta=None, logs=None, tables=None):
+    def __init__(self,
+                 path: pathlib.Path | h5py.File | BinaryIO,
+                 pixel_size: float = None,
+                 md5_5m: str = None,
+                 meta: Dict = None,
+                 logs: Dict[List[str]] = None,
+                 tables: Dict[np.ndarray] = None,
+                 image_cache_size: int = 5,
+                 ):
         # Init is in __setstate__ so we can pickle this class
         # and use it for multiprocessing.
         if isinstance(path, h5py.File):
@@ -32,7 +39,9 @@ class HDF5Data:
                            "md5_5m": md5_5m,
                            "meta": meta,
                            "logs": logs,
-                           "tables": tables})
+                           "tables": tables,
+                           "image_cache_size": image_cache_size,
+                           })
 
     def __contains__(self, item):
         return item in self.keys()
@@ -101,16 +110,22 @@ class HDF5Data:
 
         if self.h5 is None:
             self.h5 = h5py.File(self.path, libver="latest")
-        self.image = HDF5ImageCache(self.h5["events/image"])
+        self.image = HDF5ImageCache(
+            self.h5["events/image"],
+            cache_size=state["image_cache_size"])
 
         if "events/image_bg" in self.h5:
-            self.image_bg = HDF5ImageCache(self.h5["events/image_bg"])
+            self.image_bg = HDF5ImageCache(
+                self.h5["events/image_bg"],
+                cache_size=state["image_cache_size"])
         else:
             self.image_bg = None
 
         if "events/mask" in self.h5:
-            self.mask = HDF5ImageCache(self.h5["events/mask"],
-                                       boolean=True)
+            self.mask = HDF5ImageCache(
+                self.h5["events/mask"],
+                cache_size=state["image_cache_size"],
+                boolean=True)
         else:
             self.mask = None
 
