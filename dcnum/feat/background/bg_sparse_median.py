@@ -105,7 +105,7 @@ class BackgroundSparseMed(Background):
             else:
                 # compute time using frame rate (approximate)
                 dur = self.event_count / fr * 1.5
-                logger.info(f"Approximating duration: {dur / 60:.1fmin}")
+                logger.info(f"Approximating duration: {dur / 60:.1f}min")
                 self.time = np.linspace(0, dur, self.event_count)
         else:
             # make an educated guess
