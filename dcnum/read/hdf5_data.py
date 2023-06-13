@@ -113,9 +113,17 @@ class HDF5Data:
     def __len__(self):
         return self.h5.attrs["experiment:event count"]
 
-    @functools.cache
-    def keys(self):
-        return sorted(self.h5["/events"].keys())
+    @property
+    def meta_nest(self):
+        """Return `self.meta` as nested dicitonary
+
+        This gets very close to the dclab `config` property of datasets.
+        """
+        md = {}
+        for key in self.meta:
+            sec, var = key.split(":")
+            md.setdefault(sec, {})[var] = self.meta[key]
+        return md
 
     @property
     def pixel_size(self):
@@ -124,6 +132,10 @@ class HDF5Data:
     @pixel_size.setter
     def pixel_size(self, pixel_size):
         self.meta["imaging:pixel size"] = pixel_size
+
+    @functools.cache
+    def keys(self):
+        return sorted(self.h5["/events"].keys())
 
     @property
     @functools.cache
