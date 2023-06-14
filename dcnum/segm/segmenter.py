@@ -190,6 +190,10 @@ class Segmenter(abc.ABC):
         mask = mask_int > 0
         return mask
 
+    def segment_chunk(self, image_data, chunk, debug=False):
+        data = image_data.get_chunk(chunk)
+        return self.segment_batch(data, debug=debug)
+
     def segment_frame(self, image):
         """Return the frame mask for one image at `index`"""
         segm_wrap = self.segment_frame_wrapper()
@@ -213,12 +217,12 @@ class Segmenter(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def segment_approach(image, image_bg):
+    def segment_approach(image):
         """Perform segmentation and return binary mask
 
         This is the approach the subclasses implements.
         """
 
     @abc.abstractmethod
-    def segment_batch(self, data, start, stop):
+    def segment_batch(self, data, start=None, stop=None, debug=False):
         """Return the frame mask array for an entire batch"""

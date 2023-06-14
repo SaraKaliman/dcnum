@@ -32,6 +32,21 @@ class HDF5ImageCache:
         #: This is a FILO cache for the chunks
         self.cache = collections.OrderedDict()
         self.shape = h5ds.shape
+        self._len = len(self.h5ds)
+
+    def _get_chunk_index_for_index(self, index):
+        if index < 0:
+            index = len(self.h5ds) + index
+        chunk_index = index // self.chunk_size
+        sub_index = index % self.chunk_size
+        return chunk_index, sub_index
+
+    def __getitem__(self, index):
+        chunk_index, sub_index = self._get_chunk_index_for_index(index)
+        return self.get_chunk(chunk_index)[sub_index]
+
+    def __len__(self):
+        return self._len
 
     def get_chunk(self, chunk_index):
         """Get one chunk of images"""
@@ -48,13 +63,16 @@ class HDF5ImageCache:
                 self.cache.popitem(last=False)
         return self.cache[chunk_index]
 
-    def __getitem__(self, index):
-        """Return the image at the given index"""
-        if index < 0:
-            index = len(self.h5ds) + index
-        chunk_index = index // self.chunk_size
-        sub_index = index % self.chunk_size
-        return self.get_chunk(chunk_index)[sub_index]
+    def iter_chunks(self):
+        size = self.h5ds.shape[0]
+        index = 0
+        chunk = 0
+        while True:
+            yield chunk
+            chunk += 1
+            index += self.chunk_size
+            if index >= size:
+                break
 
 
 class ImageCorrCache:
@@ -70,7 +88,21 @@ class ImageCorrCache:
         self.cache = collections.OrderedDict()
         self.cache_size = image.cache_size
 
-    def _get_chunk(self, chunk_index):
+    def _get_chunk_index_for_index(self, index):
+        if index < 0:
+            index = len(self.h5ds) + index
+        chunk_index = index // self.chunk_size
+        sub_index = index % self.chunk_size
+        return chunk_index, sub_index
+
+    def __getitem__(self, index):
+        chunk_index, sub_index = self._get_chunk_index_for_index(index)
+        return self.get_chunk(chunk_index)[sub_index]
+
+    def __len__(self):
+        return len(self.image)
+
+    def get_chunk(self, chunk_index):
         if chunk_index not in self.cache:
             data = np.array(self.image.get_chunk(chunk_index), dtype=int) \
                 - self.image_bg.get_chunk(chunk_index)
@@ -80,12 +112,8 @@ class ImageCorrCache:
                 self.cache.popitem(last=False)
         return self.cache[chunk_index]
 
-    def __getitem__(self, index):
-        if index < 0:
-            index = len(self.h5ds) + index
-        chunk_index = index // self.chunk_size
-        sub_index = index % self.chunk_size
-        return self._get_chunk(chunk_index)[sub_index]
+    def iter_chunks(self):
+        return self.image.iter_chunks()
 
 
 @functools.cache

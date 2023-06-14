@@ -3,6 +3,7 @@ import pickle
 
 import h5py
 import numpy as np
+import pytest
 
 from dcnum import read
 
@@ -45,6 +46,20 @@ def test_image_cache(tmp_path):
         assert 0 not in hic.cache  # first item gets removed
         assert 1 in hic.cache
         assert 2 in hic.cache
+
+
+@pytest.mark.parametrize("size, chunks", [(209, 21),
+                                          (210, 21),
+                                          (211, 22)])
+def test_image_cache_iter_chunks(size, chunks, tmp_path):
+    path = tmp_path / "test.hdf5"
+    with h5py.File(path, "w") as hw:
+        hw["events/image"] = np.random.rand(size, 80, 180)
+    with h5py.File(path, "r") as h5:
+        hic = read.HDF5ImageCache(h5["events/image"],
+                                  chunk_size=10,
+                                  cache_size=2)
+        assert list(hic.iter_chunks()) == list(range(chunks))
 
 
 def test_pixel_size_getset(tmp_path):

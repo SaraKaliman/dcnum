@@ -1,4 +1,5 @@
 0.0.6
+ - enh: introduce iter_chunks for cached image data
  - ref: rename feat.background.get_available_background_methods
  - ref: store PPID information in dataset metadata instead of "user" section
 0.0.5

@@ -90,8 +90,8 @@ class CPUSegmenter(Segmenter, abc.ABC):
 
     def segment_batch(self,
                       image_data: np.ndarray,
-                      start: int,
-                      stop: int,
+                      start: int = None,
+                      stop: int = None,
                       debug: bool = False):
         """Perform batch segmentation of `image_data`
 
@@ -111,6 +111,10 @@ class CPUSegmenter(Segmenter, abc.ABC):
         - If the segmentation algorithm only accepts background-corrected
           images, then `image_data` must already be background-corrected.
         """
+        if stop is None or start is None:
+            start = 0
+            stop = len(image_data)
+
         batch_size = stop - start
         size = np.prod(image_data[0]) * batch_size
 
