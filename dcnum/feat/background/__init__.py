@@ -8,7 +8,7 @@ from .bg_sparse_median import BackgroundSparseMed
 
 
 @functools.cache
-def get_background_methods():
+def get_available_background_methods():
     """Return dictionary of background computation methods"""
     methods = {}
     for cls in Background.__subclasses__():

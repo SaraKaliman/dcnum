@@ -1,3 +1,5 @@
+0.0.6
+ - ref: rename feat.background.get_available_background_methods
 0.0.5
  - enh: allow to set image_cache_size in HDF5Data
  - enh: allow to easily register new custom segmenters
