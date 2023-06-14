@@ -205,7 +205,7 @@ class Segmenter(abc.ABC):
         segm_wrap = self.segment_frame_wrapper()
         # obtain mask or label
         mol = segm_wrap(image)
-        if mol.dtype is np.dtype(bool):
+        if mol.dtype == bool:
             # convert mask to label
             labels, _ = ndi.label(
                 input=mol,
