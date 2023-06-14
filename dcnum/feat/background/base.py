@@ -132,9 +132,9 @@ class Background(abc.ABC):
         self.process_approach()
 
         bg_ppid = self.get_ppid()
-        # Write custom metadata
-        self.h5out.attrs["user:dcevent ppid background"] = bg_ppid
-        self.h5out.attrs["user:dcevent ppid generation"] = \
+        # Store pipeline information in the image_bg feature
+        self.h5out["events/image_bg"].attrs["dcnum ppid background"] = bg_ppid
+        self.h5out["events/image_bg"].attrs["dcnum ppid generation"] = \
             ppid.DCNUM_PPID_GENERATION
 
     @abc.abstractmethod
