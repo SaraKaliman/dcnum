@@ -48,6 +48,7 @@ def test_segm_thresh_basic():
                                         kwargs_mask={"closing_disk": 3})
     for ii in range(len(frame_u)):
         mask_seg = sm.segment_frame(image_u_c[ii])
+        mask_seg = np.array(mask_seg, dtype=bool)
         # Remove small objects, because this is not implemented in the
         # segmenter class as it would be part of gating.
         mask_seg = morphology.remove_small_objects(mask_seg, min_size=10)
@@ -132,3 +133,139 @@ def test_segm_thresh_segment_batch_large(worker_type):
     for jj in range(101, 121):
         mask_seg = masks_seg_2[jj - 101]
         assert np.all(mask_seg == mask[jj]), f"masks not matching at {jj}"
+
+
+def test_segm_thresh_labeled_mask():
+    mask = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 1, 0, 1, 0, 0, 0],  # filled, 1
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 1],
+        [0, 0, 0, 0, 0, 1, 1, 1],  # border, 2
+        [0, 0, 0, 0, 0, 1, 1, 1],
+        [0, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],  # other, 3
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=bool)
+
+    sm1 = segm.segm_thresh.SegmentThresh(thresh=-6,
+                                         kwargs_mask={"clear_border": True,
+                                                      "fill_holes": True,
+                                                      "closing_disk": 0,
+                                                      })
+    labels1 = sm1.segment_frame(-10 * mask)
+    assert np.sum(labels1 != 0) == 21
+    assert len(np.unique(labels1)) == 3  # (bg, filled, other)
+    assert np.sum(labels1 == 1) == 9
+    # due to the relabeling done in `fill_holes`, the index of "other" is "3"
+    assert np.sum(labels1 == 2) == 12
+
+    sm2 = segm.segm_thresh.SegmentThresh(thresh=-6,
+                                         kwargs_mask={"clear_border": True,
+                                                      "fill_holes": False,
+                                                      "closing_disk": 0,
+                                                      })
+    labels2 = sm2.segment_frame(-10 * mask)
+    assert np.sum(labels2 != 0) == 20
+    assert len(np.unique(labels2)) == 3  # (bg, filled, other)
+    assert np.sum(labels2 == 1) == 8
+    assert np.sum(labels2 == 3) == 12
+
+    sm3 = segm.segm_thresh.SegmentThresh(thresh=-6,
+                                         kwargs_mask={"clear_border": False,
+                                                      "fill_holes": False,
+                                                      "closing_disk": 0,
+                                                      })
+    labels3 = sm3.segment_frame(-10 * mask)
+    assert np.sum(labels3 != 0) == 30
+    assert len(np.unique(labels3)) == 4  # (bg, filled, border, other)
+    assert np.sum(labels3 == 1) == 8
+    assert np.sum(labels3 == 2) == 10
+    assert np.sum(labels3 == 3) == 12
+
+    sm4 = segm.segm_thresh.SegmentThresh(thresh=-6,
+                                         kwargs_mask={"clear_border": False,
+                                                      "fill_holes": True,
+                                                      "closing_disk": 0,
+                                                      })
+    labels4 = sm4.segment_frame(-10 * mask)
+    assert np.sum(labels4 != 0) == 31
+    assert len(np.unique(labels4)) == 4  # (bg, filled, border, other)
+    assert np.sum(labels4 == 1) == 9
+    assert np.sum(labels4 == 2) == 10
+    assert np.sum(labels4 == 3) == 12
+
+
+def test_segm_thresh_labeled_mask_closing_disk():
+    mask = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 1, 0, 1, 0, 0, 0, 0],  # filled, 1
+        [0, 0, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 1, 1, 1, 1],
+        [0, 0, 0, 0, 0, 0, 1, 1, 1],  # border, 2
+        [0, 0, 0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 1, 1, 0, 0],  # other, 3
+        [0, 0, 1, 0, 0, 0, 1, 0, 0],
+        [0, 0, 1, 0, 0, 0, 1, 0, 0],
+        [0, 0, 1, 1, 1, 1, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=bool)
+
+    sm1 = segm.segm_thresh.SegmentThresh(thresh=-6,
+                                         kwargs_mask={"clear_border": True,
+                                                      "fill_holes": True,
+                                                      "closing_disk": 1,
+                                                      })
+    labels1 = sm1.segment_frame(-10 * mask)
+    assert np.sum(labels1 != 0) == 32
+    assert len(np.unique(labels1)) == 3  # (bg, filled, other)
+    assert np.sum(labels1 == 1) == 9
+    # due to the relabeling done in `fill_holes`, the index of "other" is "3"
+    assert np.sum(labels1 == 2) == 23
+
+    sm2 = segm.segm_thresh.SegmentThresh(thresh=-6,
+                                         kwargs_mask={"clear_border": True,
+                                                      "fill_holes": False,
+                                                      "closing_disk": 1,
+                                                      })
+    labels2 = sm2.segment_frame(-10 * mask)
+    assert np.sum(labels2 != 0) == 27
+    assert len(np.unique(labels2)) == 3  # (bg, filled, other)
+    assert np.sum(labels2 == 1) == 9
+    assert np.sum(labels2 == 3) == 18
+
+    sm3 = segm.segm_thresh.SegmentThresh(thresh=-6,
+                                         kwargs_mask={"clear_border": False,
+                                                      "fill_holes": False,
+                                                      "closing_disk": 1,
+                                                      })
+    labels3 = sm3.segment_frame(-10 * mask)
+    assert np.sum(labels3 != 0) == 35
+    assert len(np.unique(labels3)) == 4  # (bg, filled, border, other)
+    assert np.sum(labels3 == 1) == 9
+    assert np.sum(labels3 == 2) == 8
+    assert np.sum(labels3 == 3) == 18
+
+    sm4 = segm.segm_thresh.SegmentThresh(thresh=-6,
+                                         kwargs_mask={"clear_border": False,
+                                                      "fill_holes": True,
+                                                      "closing_disk": 1,
+                                                      })
+    labels4 = sm4.segment_frame(-10 * mask)
+    assert np.sum(labels4 != 0) == 40
+    assert len(np.unique(labels4)) == 4  # (bg, filled, border, other)
+    assert np.sum(labels4 == 1) == 9
+    assert np.sum(labels4 == 2) == 8
+    assert np.sum(labels4 == 3) == 23

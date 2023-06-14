@@ -5,7 +5,8 @@ import logging
 
 import cv2
 import numpy as np
-from skimage import measure, morphology
+import scipy.ndimage as ndi
+from skimage import morphology
 
 from ..meta.ppid import kwargs_to_ppid
 
@@ -116,7 +117,7 @@ class Segmenter(abc.ABC):
         return morphology.disk(radius)
 
     @staticmethod
-    def process_mask(mask, *,
+    def process_mask(labels, *,
                      clear_border: bool = True,
                      fill_holes: bool = True,
                      closing_disk: int = 5):
@@ -129,7 +130,8 @@ class Segmenter(abc.ABC):
 
         Parameters
         ----------
-        mask: 2d boolean ndarray
+        labels: 2d integer ndarray
+            Labeled input (contains blobs with same number)
         clear_border: bool
             clear the image boarder using
             :func:`skimage.segmentation.clear_border`
@@ -145,21 +147,25 @@ class Segmenter(abc.ABC):
             # from skimage import segmentation
             # segmentation.clear_border(mask, out=mask)
             #
-            if (mask[0, :].sum() or mask[-1, :].sum()
-                    or mask[:, 0].sum() or mask[:, -1].sum()):
-                border = np.zeros_like(mask)
+            if (labels[0, :].sum() or labels[-1, :].sum()
+                    or labels[:, 0].sum() or labels[:, -1].sum()):
+                border = np.zeros_like(labels, dtype=bool)
                 border[0] = True
                 border[-1] = True
                 border[:, 0] = True
                 border[:, -1] = True
-                label = measure.label(mask)
-                indices = sorted(np.unique(label[border]))
+                indices = sorted(np.unique(labels[border]))
                 for ii in indices[1:]:
-                    mask[label == ii] = False
+                    labels[labels == ii] = 0
 
         # scikit-image is too slow for us here. So we use OpenCV.
         # https://github.com/scikit-image/scikit-image/issues/1190
-        mask_int = np.array(mask, dtype=np.uint8) * 255
+        labels = np.array(labels, dtype=np.uint8)
+
+        # Note that since we have converted the image to uint8, we now
+        # only support up to 255 labels (or 254 if you are filling
+        # holes, see below), which should be sufficient.
+        # But keep this in mind if you ever wanted to scale this up!
 
         if closing_disk:
             #
@@ -170,8 +176,8 @@ class Segmenter(abc.ABC):
             #    out=mask)
             #
             element = Segmenter.get_disk(closing_disk)
-            mask_dilated = cv2.dilate(mask_int, element)
-            mask_int = cv2.erode(mask_dilated, element)
+            labels_dilated = cv2.dilate(labels, element)
+            labels = cv2.erode(labels_dilated, element)
 
         if fill_holes:
             #
@@ -180,29 +186,36 @@ class Segmenter(abc.ABC):
             #
             # Floodfill algorithm fills the background image and
             # the resulting inversion is the image with holes filled.
-            im_floodfill = mask_int.copy()
-            h, w = mask_int.shape
-            ff_mask = np.zeros((h + 2, w + 2), np.uint8)
-            cv2.floodFill(im_floodfill, ff_mask, (0, 0), 255)
-            im_floodfill_inv = cv2.bitwise_not(im_floodfill)
-            mask_int = mask_int | im_floodfill_inv
+            # This will destroy labels (adding 255 to background)
+            cv2.floodFill(labels, None, (0, 0), 255)
+            mask = labels != 255
+            labels, _ = ndi.label(
+                input=mask,
+                structure=ndi.generate_binary_structure(2, 2))
 
-        mask = mask_int > 0
-        return mask
+        return labels
 
     def segment_chunk(self, image_data, chunk, debug=False):
+        """Return the integer labels for one `image_data` chunk"""
         data = image_data.get_chunk(chunk)
         return self.segment_batch(data, debug=debug)
 
     def segment_frame(self, image):
-        """Return the frame mask for one image at `index`"""
+        """Return the integer label image for `index`"""
         segm_wrap = self.segment_frame_wrapper()
-        # obtain mask
-        mask = segm_wrap(image)
+        # obtain mask or label
+        mol = segm_wrap(image)
+        if mol.dtype is np.dtype(bool):
+            # convert mask to label
+            labels, _ = ndi.label(
+                input=mol,
+                structure=ndi.generate_binary_structure(2, 2))
+        else:
+            labels = mol
         # optional postprocessing
         if self.mask_postprocessing:
-            mask = self.process_mask(mask, **self.kwargs_mask)
-        return mask
+            labels = self.process_mask(labels, **self.kwargs_mask)
+        return labels
 
     @functools.cache
     def segment_frame_wrapper(self):
@@ -218,11 +231,11 @@ class Segmenter(abc.ABC):
     @staticmethod
     @abc.abstractmethod
     def segment_approach(image):
-        """Perform segmentation and return binary mask
+        """Perform segmentation and return integer label or binary mask image
 
         This is the approach the subclasses implements.
         """
 
     @abc.abstractmethod
     def segment_batch(self, data, start=None, stop=None, debug=False):
-        """Return the frame mask array for an entire batch"""
+        """Return the integer labels for an entire batch"""
