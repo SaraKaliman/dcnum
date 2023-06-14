@@ -44,7 +44,8 @@ def test_segm_thresh_basic():
 
     image_u_c = np.array(image_u, dtype=int) - image_bg_u
 
-    sm = segm.SegmentThresh(thresh=-6, kwargs_mask={"closing_disk": 3})
+    sm = segm.segm_thresh.SegmentThresh(thresh=-6,
+                                        kwargs_mask={"closing_disk": 3})
     for ii in range(len(frame_u)):
         mask_seg = sm.segment_frame(image_u_c[ii])
         # Remove small objects, because this is not implemented in the
@@ -77,7 +78,8 @@ def test_segm_thresh_segment_batch(worker_type):
 
     image_u_c = np.array(image_u, dtype=int) - image_bg_u
 
-    sm = segm.SegmentThresh(thresh=-6, kwargs_mask={"closing_disk": 3})
+    sm = segm.segm_thresh.SegmentThresh(thresh=-6,
+                                        kwargs_mask={"closing_disk": 3})
 
     masks_seg = sm.segment_batch(image_u_c, start=0, stop=5, debug=debug)
     assert masks_seg is sm.mask_array
@@ -101,7 +103,8 @@ def test_segm_thresh_segment_batch_large(worker_type):
     mask[:, 10:71, 100:161] = morphology.disk(30).reshape(-1, 61, 61)
     image = -10 * mask
 
-    sm = segm.SegmentThresh(thresh=-6, kwargs_mask={"closing_disk": 3})
+    sm = segm.segm_thresh.SegmentThresh(thresh=-6,
+                                        kwargs_mask={"closing_disk": 3})
 
     masks_seg_1 = np.copy(
         sm.segment_batch(image, start=0, stop=101, debug=debug))

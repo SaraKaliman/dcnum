@@ -1,4 +1,4 @@
-from .segmenter import CPUSegmenter
+from .segmenter_cpu import CPUSegmenter
 
 
 class SegmentThresh(CPUSegmenter):

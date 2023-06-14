@@ -1,5 +1,7 @@
 0.0.5
  - enh: allow to set image_cache_size in HDF5Data
+ - enh: allow to easily register new custom segmenters
+ - ref: CPUSegmenter has its own submodule now
 0.0.4
  - feat: introduce HDF5 virtual dataset path concatenator
  - enh: allow to pass h5py.File object to HDF5Data
