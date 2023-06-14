@@ -13,6 +13,9 @@ class HDF5Writer:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def close(self):
         self.h5.close()
 
     @staticmethod
