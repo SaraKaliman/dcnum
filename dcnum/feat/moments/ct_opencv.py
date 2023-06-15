@@ -13,8 +13,5 @@ def contour_single_opencv(mask):
 
     # raw contour
     cont_raw = np.squeeze(conts[0])
-    if len(cont_raw) < 5:
-        # Contour too short
-        return
 
     return cont_raw
