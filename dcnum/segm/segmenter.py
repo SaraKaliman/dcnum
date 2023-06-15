@@ -175,7 +175,6 @@ class Segmenter(abc.ABC):
             labels_eroded = cv2.erode(labels_dilated, element)
             labels, _ = ndi.label(labels_eroded > 0)
 
-
         if fill_holes:
             # Floodfill only works with uint8 (too small) or int32
             if not labels.dtype == np.int32:
