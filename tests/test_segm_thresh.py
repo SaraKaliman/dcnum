@@ -47,8 +47,8 @@ def test_segm_thresh_basic():
     sm = segm.segm_thresh.SegmentThresh(thresh=-6,
                                         kwargs_mask={"closing_disk": 3})
     for ii in range(len(frame_u)):
-        mask_seg = sm.segment_frame(image_u_c[ii])
-        mask_seg = np.array(mask_seg, dtype=bool)
+        labels_seg = sm.segment_frame(image_u_c[ii])
+        mask_seg = np.array(labels_seg, dtype=bool)
         # Remove small objects, because this is not implemented in the
         # segmenter class as it would be part of gating.
         mask_seg = morphology.remove_small_objects(mask_seg, min_size=10)
@@ -82,13 +82,14 @@ def test_segm_thresh_segment_batch(worker_type):
     sm = segm.segm_thresh.SegmentThresh(thresh=-6,
                                         kwargs_mask={"closing_disk": 3})
 
-    masks_seg = sm.segment_batch(image_u_c, start=0, stop=5, debug=debug)
-    assert masks_seg is sm.mask_array
+    labels_seg = sm.segment_batch(image_u_c, start=0, stop=5, debug=debug)
+    assert labels_seg is sm.labels_array
+    assert np.all(np.array(labels_seg, dtype=bool) == sm.mask_array)
     # tell workers to stop
     sm.join_workers()
 
     for ii in range(len(frame_u)):
-        mask_seg = masks_seg[ii]
+        mask_seg = np.array(labels_seg[ii], dtype=bool)
         # Remove small objects, because this is not implemented in the
         # segmenter class as it would be part of gating.
         mask_seg = morphology.remove_small_objects(mask_seg, min_size=10)
@@ -107,9 +108,10 @@ def test_segm_thresh_segment_batch_large(worker_type):
     sm = segm.segm_thresh.SegmentThresh(thresh=-6,
                                         kwargs_mask={"closing_disk": 3})
 
-    masks_seg_1 = np.copy(
+    labels_seg_1 = np.copy(
         sm.segment_batch(image, start=0, stop=101, debug=debug))
 
+    assert labels_seg_1.dtype == np.uint8  #
     assert sm.mp_batch_index.value == 0
     if worker_type == "thread":
         assert len(sm._mp_workers) == 1
@@ -120,18 +122,18 @@ def test_segm_thresh_segment_batch_large(worker_type):
         # Check whether all processes did their deeds
         assert sm.mp_batch_worker.value == mp.cpu_count()
 
-    masks_seg_2 = np.copy(
+    labels_seg_2 = np.copy(
         sm.segment_batch(image, start=101, stop=121, debug=debug))
 
     # tell workers to stop
     sm.join_workers()
 
     for ii in range(101):
-        mask_seg = masks_seg_1[ii]
+        mask_seg = np.array(labels_seg_1[ii], dtype=bool)
         assert np.all(mask_seg == mask[ii]), f"masks not matching at {ii}"
 
     for jj in range(101, 121):
-        mask_seg = masks_seg_2[jj - 101]
+        mask_seg = np.array(labels_seg_2[jj - 101], dtype=bool)
         assert np.all(mask_seg == mask[jj]), f"masks not matching at {jj}"
 
 

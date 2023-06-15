@@ -16,8 +16,8 @@ class CPUSegmenter(Segmenter, abc.ABC):
         super(CPUSegmenter, self).__init__(*args, **kwargs)
         self.mp_image_raw = None
         self._mp_image_np = None
-        self.mp_mask_raw = None
-        self._mp_mask_np = None
+        self.mp_labels_raw = None
+        self._mp_labels_np = None
         self._mp_workers = []
         # Image shape of the input array
         self.image_shape = None
@@ -43,7 +43,7 @@ class CPUSegmenter(Segmenter, abc.ABC):
         # Remove the unpicklable entries.
         del state["logger"]
         del state["_mp_image_np"]
-        del state["_mp_mask_np"]
+        del state["_mp_labels_np"]
         del state["_mp_workers"]
         return state
 
@@ -79,8 +79,12 @@ class CPUSegmenter(Segmenter, abc.ABC):
         return self._mp_image_np
 
     @property
+    def labels_array(self):
+        return self._mp_labels_np
+
+    @property
     def mask_array(self):
-        return self._mp_mask_np
+        return np.array(self._mp_labels_np, dtype=bool)
 
     def join_workers(self):
         """Ask all workers to stop and join them"""
@@ -124,7 +128,7 @@ class CPUSegmenter(Segmenter, abc.ABC):
         if self._mp_image_np is not None and self._mp_image_np.size != size:
             # reset image data
             self._mp_image_np = None
-            self._mp_mask_np = None
+            self._mp_labels_np = None
             # TODO: If only the batch_size changes, don't
             #  reinitialize the workers. Otherwise, the final rest of
             #  analyzing a dataset would always take a little longer.
@@ -140,11 +144,11 @@ class CPUSegmenter(Segmenter, abc.ABC):
                 dtype=np.ctypeslib.ctypes.c_int8,
             )
 
-        if self._mp_mask_np is None:
-            self.mp_mask_raw, self._mp_mask_np = self._create_shared_array(
+        if self._mp_labels_np is None:
+            self.mp_labels_raw, self._mp_labels_np = self._create_shared_array(
                 image_shape=self.image_shape,
                 batch_size=batch_size,
-                dtype=np.ctypeslib.ctypes.c_bool,
+                dtype=np.ctypeslib.ctypes.c_uint8,
             )
 
         # populate image data
@@ -186,7 +190,7 @@ class CPUSegmenter(Segmenter, abc.ABC):
         while self.mp_batch_worker.value != num_workers:
             time.sleep(.1)
 
-        return self._mp_mask_np
+        return self._mp_labels_np
 
 
 class CPUSegmenterWorker:
@@ -221,7 +225,7 @@ class CPUSegmenterWorker:
         # The image data for segmentation
         self.image_data_raw = segmenter.mp_image_raw
         # Boolean mask array
-        self.mask_data_raw = segmenter.mp_mask_raw
+        self.labels_data_raw = segmenter.mp_labels_raw
         # The shape of one image
         self.image_shape = segmenter.image_shape
         self.sl_start = sl_start
@@ -231,7 +235,7 @@ class CPUSegmenterWorker:
         # We have to create the numpy-versions of the mp.RawArrays here,
         # otherwise we only get some kind of copy in the new process
         # when we use "spawn" instead of "fork".
-        mask_data = np.ctypeslib.as_array(self.mask_data_raw).reshape(
+        labels_data = np.ctypeslib.as_array(self.labels_data_raw).reshape(
             -1, self.image_shape[0], self.image_shape[1])
         image_data = np.ctypeslib.as_array(self.image_data_raw).reshape(
             -1, self.image_shape[0], self.image_shape[1])
@@ -248,7 +252,7 @@ class CPUSegmenterWorker:
                     with self.batch_worker:
                         self.batch_worker.value += 1
                 else:
-                    mask_data[idx, :, :] = self.segmenter.segment_frame(
+                    labels_data[idx, :, :] = self.segmenter.segment_frame(
                         image_data[idx])
                     idx += 1
             elif self.shutdown.value:
