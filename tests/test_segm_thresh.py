@@ -111,7 +111,7 @@ def test_segm_thresh_segment_batch_large(worker_type):
     labels_seg_1 = np.copy(
         sm.segment_batch(image, start=0, stop=101, debug=debug))
 
-    assert labels_seg_1.dtype == np.uint8  #
+    assert labels_seg_1.dtype == np.uint16  # uint8 is not enough
     assert sm.mp_batch_index.value == 0
     if worker_type == "thread":
         assert len(sm._mp_workers) == 1
@@ -173,10 +173,11 @@ def test_segm_thresh_labeled_mask():
                                                       "closing_disk": 0,
                                                       })
     labels2 = sm2.segment_frame(-10 * mask)
+    _, l2a, l2b = np.unique(labels2)
     assert np.sum(labels2 != 0) == 20
     assert len(np.unique(labels2)) == 3  # (bg, filled, other)
-    assert np.sum(labels2 == 1) == 8
-    assert np.sum(labels2 == 3) == 12
+    assert np.sum(labels2 == l2a) == 8
+    assert np.sum(labels2 == l2b) == 12
 
     sm3 = segm.segm_thresh.SegmentThresh(thresh=-6,
                                          kwargs_mask={"clear_border": False,
@@ -243,10 +244,11 @@ def test_segm_thresh_labeled_mask_closing_disk():
                                                       "closing_disk": 1,
                                                       })
     labels2 = sm2.segment_frame(-10 * mask)
+    _, l2a, l2b = np.unique(labels2)
     assert np.sum(labels2 != 0) == 27
     assert len(np.unique(labels2)) == 3  # (bg, filled, other)
-    assert np.sum(labels2 == 1) == 9
-    assert np.sum(labels2 == 3) == 18
+    assert np.sum(labels2 == l2a) == 9
+    assert np.sum(labels2 == l2b) == 18
 
     sm3 = segm.segm_thresh.SegmentThresh(thresh=-6,
                                          kwargs_mask={"clear_border": False,

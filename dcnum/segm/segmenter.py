@@ -160,12 +160,6 @@ class Segmenter(abc.ABC):
 
         # scikit-image is too slow for us here. So we use OpenCV.
         # https://github.com/scikit-image/scikit-image/issues/1190
-        labels = np.array(labels, dtype=np.uint8)
-
-        # Note that since we have converted the image to uint8, we now
-        # only support up to 255 labels (or 254 if you are filling
-        # holes, see below), which should be sufficient.
-        # But keep this in mind if you ever wanted to scale this up!
 
         if closing_disk:
             #
@@ -176,19 +170,25 @@ class Segmenter(abc.ABC):
             #    out=mask)
             #
             element = Segmenter.get_disk(closing_disk)
-            labels_dilated = cv2.dilate(labels, element)
-            labels = cv2.erode(labels_dilated, element)
+            labels_uint8 = np.array(labels, dtype=np.uint8)
+            labels_dilated = cv2.dilate(labels_uint8, element)
+            labels_eroded = cv2.erode(labels_dilated, element)
+            labels, _ = ndi.label(labels_eroded > 0)
+
 
         if fill_holes:
+            # Floodfill only works with uint8 (too small) or int32
+            if not labels.dtype == np.int32:
+                labels = np.array(labels, dtype=np.int32)
             #
             # from scipy import ndimage
             # mask_old = ndimage.binary_fill_holes(mask)
             #
             # Floodfill algorithm fills the background image and
             # the resulting inversion is the image with holes filled.
-            # This will destroy labels (adding 255 to background)
-            cv2.floodFill(labels, None, (0, 0), 255)
-            mask = labels != 255
+            # This will destroy labels (adding 2,147,483,647 to background)
+            cv2.floodFill(labels, None, (0, 0), 2147483647)
+            mask = labels != 2147483647
             labels, _ = ndi.label(
                 input=mask,
                 structure=ndi.generate_binary_structure(2, 2))
@@ -207,7 +207,7 @@ class Segmenter(abc.ABC):
         mol = segm_wrap(image)
         if mol.dtype == bool:
             # convert mask to label
-            labels, _ = ndi.label(
+            labels, num_labels = ndi.label(
                 input=mol,
                 structure=ndi.generate_binary_structure(2, 2))
         else:

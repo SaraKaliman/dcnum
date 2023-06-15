@@ -2,6 +2,7 @@
  - feat: add HDF5Writer and HDF5WriterThread classes in write submodule
  - feat: segmenters compute labeled images instead of masks
  - enh: introduce iter_chunks for cached image data
+ - ref: do not filter contour data size for
  - ref: rename feat.background.get_available_background_methods
  - ref: store PPID information in dataset metadata instead of "user" section
 0.0.5

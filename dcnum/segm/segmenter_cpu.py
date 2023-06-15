@@ -62,7 +62,7 @@ class CPUSegmenter(Segmenter, abc.ABC):
         batch_size: int
             Number of images in the array
         dtype:
-            ctype, e.g. `np.ctypeslib.ctypes.c_int8`
+            ctype, e.g. `np.ctypeslib.ctypes.c_uint8`
             or `np.ctypeslib.ctypes.c_bool`
         """
         sx, sy = image_shape
@@ -141,14 +141,14 @@ class CPUSegmenter(Segmenter, abc.ABC):
             self.mp_image_raw, self._mp_image_np = self._create_shared_array(
                 image_shape=self.image_shape,
                 batch_size=batch_size,
-                dtype=np.ctypeslib.ctypes.c_int8,
+                dtype=np.ctypeslib.ctypes.c_int32,
             )
 
         if self._mp_labels_np is None:
             self.mp_labels_raw, self._mp_labels_np = self._create_shared_array(
                 image_shape=self.image_shape,
                 batch_size=batch_size,
-                dtype=np.ctypeslib.ctypes.c_uint8,
+                dtype=np.ctypeslib.ctypes.c_uint16,
             )
 
         # populate image data
