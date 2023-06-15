@@ -6,7 +6,7 @@ import numpy as np
 class HDF5Writer:
     def __init__(self, path, mode="a"):
         """Write deformability cytometry HDF5 data"""
-        self.h5 = h5py.File(path, mode=mode)
+        self.h5 = h5py.File(path, mode=mode, libver="latest")
         self.events = self.h5.require_group("events")
 
     def __enter__(self):

@@ -20,7 +20,10 @@ def compute_pipeline_hash(bg_id, seg_id, feat_id, gate_id,
 
 
 def convert_to_dtype(value, dtype):
-    if dtype is bool:
+    if isinstance(dtype, str):
+        raise ValueError("Annotations are strings, pleace make sure to not "
+                         "import __annotations__ from future!")
+    elif dtype is bool:
         if isinstance(value, str):
             if value.lower() in ["true", "yes"]:
                 value = True
