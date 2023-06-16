@@ -10,6 +10,8 @@ class HDF5WriterThread(threading.Thread):
     def __init__(self,
                  path_out: pathlib.Path,
                  dq: collections.deque,
+                 ds_kwds: dict = None,
+                 mode: str = "a",
                  *args, **kwargs):
         """Convenience class for writing to data outside the main loop
 
@@ -22,7 +24,7 @@ class HDF5WriterThread(threading.Thread):
             using `popleft()`.
         """
         super(HDF5WriterThread, self).__init__(*args, **kwargs)
-        self.writer = HDF5Writer(path_out)
+        self.writer = HDF5Writer(path_out, mode=mode, ds_kwds=ds_kwds)
         self.dq = dq
         self.may_stop_loop = False
         self.must_stop_loop = False

@@ -4,10 +4,16 @@ import numpy as np
 
 
 class HDF5Writer:
-    def __init__(self, path, mode="a"):
+    def __init__(self, path, mode="a", ds_kwds=None):
         """Write deformability cytometry HDF5 data"""
         self.h5 = h5py.File(path, mode=mode, libver="latest")
         self.events = self.h5.require_group("events")
+        if ds_kwds is None:
+            ds_kwds = {}
+        for key, val in dict(hdf5plugin.Zstd(clevel=5)).items():
+            ds_kwds.setdefault(key, val)
+        ds_kwds.setdefault("fletcher32", True)
+        self.ds_kwds = ds_kwds
 
     def __enter__(self):
         return self
@@ -39,9 +45,11 @@ class HDF5Writer:
 
     def require_feature(self, feat, item_shape, dtype, ds_kwds=None):
         """Create a new feature in the "events" group"""
+
         if ds_kwds is None:
-            ds_kwds = dict(hdf5plugin.Zstd(clevel=5))
-            ds_kwds["fletcher32"] = True
+            ds_kwds = {}
+        for key in self.ds_kwds:
+            ds_kwds.setdefault(key, self.ds_kwds[key])
         if feat not in self.events:
             dset = self.events.create_dataset(
                 feat,
