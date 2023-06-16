@@ -4,16 +4,15 @@ import numpy as np
 from .common import haralick_names
 
 
-def haralick_texture_features(image, mask, image_bg=None):
-    if image_bg is not None:
-        # We have to perform background subtraction (casting required).
-        image_corr = np.array(image, dtype=int) - image_bg
-    else:
-        # Input is already background-corrected
-        image_corr = image
-
+def haralick_texture_features(image, mask, image_bg=None, image_corr=None):
     # make sure we have a boolean array
-    mask = np.asarray(mask, dtype=bool)
+    mask = np.array(mask, dtype=bool)
+
+    # compute features if necessary
+    if image_bg is not None or image_corr is not None:
+        # Background-corrected brightness values
+        if image_corr is None:
+            image_corr = np.array(image, dtype=np.int16) - image_bg
 
     size = image.shape[0]
 
@@ -22,7 +21,6 @@ def haralick_texture_features(image, mask, image_bg=None):
     rec_arr = np.recarray(size, dtype=ds_dt)
     nan_result = np.nan * np.zeros(26, dtype=float)
 
-    # This loop is parallelized with numba jit via `prange`.
     for ii in range(size):
         # Haralick texture features
         # https://gitlab.gwdg.de/blood_data_analysis/dcevent/-/issues/20
@@ -31,8 +29,10 @@ def haralick_texture_features(image, mask, image_bg=None):
         # - add grayscale values (negative values not supported)
         #   -> maximum value should be as small as possible
         # - set pixels outside contour to zero (ignored areas, see mahotas)
-        minval = (image_corr[ii][mask[ii]]).min()
-        imi = (image_corr[ii] - minval + 1) * mask[ii]
+        imcoi = image_corr[ii]
+        maski = mask[ii]
+        minval = imcoi[maski].min()
+        imi = np.array((imcoi - minval + 1) * maski, dtype=np.uint8)
         try:
             ret = mh_haralick(imi,
                               ignore_zeros=True,
