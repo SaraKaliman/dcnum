@@ -7,8 +7,8 @@ def brightness_features(image,
                         image_bg=None,
                         image_corr=None):
     mask = np.array(mask, dtype=bool)
-    data = {}
 
+    data = {}
     avg_sd = compute_avg_sd_masked_uint8(image, mask)
     data["bright_avg"] = avg_sd[:, 0]
     data["bright_sd"] = avg_sd[:, 1]
@@ -33,7 +33,7 @@ def brightness_features(image,
     return data
 
 
-@njit(float64[:, :](uint8[:, :, :], bool_[:, :, :]), parallel=True)
+@njit(float64[:, :](uint8[:, :, :], bool_[:, :, :]), parallel=True, cache=True)
 def compute_avg_sd_masked_uint8(image, mask):
     size = image.shape[0]
     avg_sd = np.zeros((size, 2), dtype=np.float64)
@@ -45,7 +45,7 @@ def compute_avg_sd_masked_uint8(image, mask):
     return avg_sd
 
 
-@njit(float64[:, :](int16[:, :, :], bool_[:, :, :]), parallel=True)
+@njit(float64[:, :](int16[:, :, :], bool_[:, :, :]), parallel=True, cache=True)
 def compute_avg_sd_masked_int16(image, mask):
     size = image.shape[0]
     avg_sd = np.zeros((size, 2), dtype=np.float64)
@@ -57,7 +57,7 @@ def compute_avg_sd_masked_int16(image, mask):
     return avg_sd
 
 
-@njit(float64[:](uint8[:, :, :]), parallel=True)
+@njit(float64[:](uint8[:, :, :]), parallel=True, cache=True)
 def compute_median(image):
     size = image.shape[0]
     image_med = np.zeros(size, dtype=np.float64)
@@ -66,7 +66,7 @@ def compute_median(image):
     return image_med
 
 
-@njit(float64[:, :](int16[:, :, :], bool_[:, :, :]), parallel=True)
+@njit(float64[:, :](int16[:, :, :], bool_[:, :, :]), parallel=True, cache=True)
 def compute_percentiles_10_90(image, mask):
     size = image.shape[0]
     percentiles = np.zeros((size, 2), dtype=np.float64)
