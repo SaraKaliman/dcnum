@@ -1,5 +1,6 @@
 0.0.7
  - enh: dataset keyword arguments and mode HDF5WriterThread
+ - enh: speed-up of brightness feature computation
 0.0.6
  - feat: add HDF5Writer and HDF5WriterThread classes in write submodule
  - feat: segmenters compute labeled images instead of masks

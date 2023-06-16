@@ -1,37 +1,79 @@
+from numba import njit, prange, bool_, float64, int16, uint8
 import numpy as np
-from numpy import ma
 
 
 def brightness_features(image,
                         mask,
-                        image_bg=None):
-    mask = np.asarray(mask, dtype=bool)
-
-    size = image.shape[0]
+                        image_bg=None,
+                        image_corr=None):
+    mask = np.array(mask, dtype=bool)
     data = {}
-    image_masked = image.view(ma.MaskedArray)
-    image_masked.mask = ~mask
 
-    data["bright_avg"] = ma.mean(image_masked, axis=(1, 2)).data
-    data["bright_sd"] = ma.std(image_masked, axis=(1, 2)).data
+    avg_sd = compute_avg_sd_masked_uint8(image, mask)
+    data["bright_avg"] = avg_sd[:, 0]
+    data["bright_sd"] = avg_sd[:, 1]
 
     if image_bg is not None:
-        data["bg_med"] = np.median(image_bg, axis=(1, 2))
+        data["bg_med"] = compute_median(image_bg)
 
+    if image_bg is not None or image_corr is not None:
         # Background-corrected brightness values
-        image_corr = np.array(image, dtype=int) - image_bg
-        image_corr_masked = image_corr.view(ma.MaskedArray)
-        image_corr_masked.mask = ~mask
-        data["bright_bc_avg"] = np.mean(image_corr_masked, axis=(1, 2))
-        data["bright_bc_sd"] = np.std(image_corr_masked, axis=(1, 2))
+        if image_corr is None:
+            image_corr = np.array(image, dtype=np.int16) - image_bg
+
+        avg_sd_corr = compute_avg_sd_masked_int16(image_corr, mask)
+        data["bright_bc_avg"] = avg_sd_corr[:, 0]
+        data["bright_bc_sd"] = avg_sd_corr[:, 1]
 
         # Percentiles
-        p10 = np.zeros(size, dtype=float)
-        p90 = np.zeros(size, dtype=float)
-        for ii in range(size):
-            p10[ii], p90[ii] = \
-                np.percentile(image_corr[ii][mask[ii]], q=(10, 90))
-        data["bright_perc_10"] = p10
-        data["bright_perc_90"] = p90
+        percentiles = compute_percentiles_10_90(image_corr, mask)
+        data["bright_perc_10"] = percentiles[:, 0]
+        data["bright_perc_90"] = percentiles[:, 1]
 
     return data
+
+
+@njit(float64[:, :](uint8[:, :, :], bool_[:, :, :]), parallel=True)
+def compute_avg_sd_masked_uint8(image, mask):
+    size = image.shape[0]
+    avg_sd = np.zeros((size, 2), dtype=np.float64)
+    for ii in prange(size):
+        maski = np.where(mask[ii].ravel())[0]
+        masked = image[ii].ravel()[maski]
+        avg_sd[ii, 0] = np.mean(masked)
+        avg_sd[ii, 1] = np.std(masked)
+    return avg_sd
+
+
+@njit(float64[:, :](int16[:, :, :], bool_[:, :, :]), parallel=True)
+def compute_avg_sd_masked_int16(image, mask):
+    size = image.shape[0]
+    avg_sd = np.zeros((size, 2), dtype=np.float64)
+    for ii in prange(size):
+        maski = np.where(mask[ii].ravel())[0]
+        masked = image[ii].ravel()[maski]
+        avg_sd[ii, 0] = np.mean(masked)
+        avg_sd[ii, 1] = np.std(masked)
+    return avg_sd
+
+
+@njit(float64[:](uint8[:, :, :]), parallel=True)
+def compute_median(image):
+    size = image.shape[0]
+    image_med = np.zeros(size, dtype=np.float64)
+    for ii in prange(size):
+        image_med[ii] = np.median(image[ii].ravel())
+    return image_med
+
+
+@njit(float64[:, :](int16[:, :, :], bool_[:, :, :]), parallel=True)
+def compute_percentiles_10_90(image, mask):
+    size = image.shape[0]
+    percentiles = np.zeros((size, 2), dtype=np.float64)
+    for ii in prange(size):
+        maski = np.where(mask[ii].ravel())[0]
+        masked = image[ii].ravel()[maski]
+        peri = np.percentile(masked, q=(10, 90))
+        percentiles[ii, 0] = peri[0]
+        percentiles[ii, 1] = peri[1]
+    return percentiles
