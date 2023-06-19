@@ -1,3 +1,6 @@
+0.0.8
+ - enh: minor improvements for HDF5ImageCache and ImageCorrCache
+ - ref: haralick texture computation now returns dict instead of recarray
 0.0.7
  - enh: dataset keyword arguments and mode HDF5WriterThread
  - enh: speed-up of brightness feature computation

@@ -16,10 +16,9 @@ def haralick_texture_features(image, mask, image_bg=None, image_corr=None):
 
     size = image.shape[0]
 
-    ds_dt = np.dtype({'names': haralick_names,
-                      'formats': [float] * len(haralick_names)})
-    rec_arr = np.recarray(size, dtype=ds_dt)
-    nan_result = np.nan * np.zeros(26, dtype=float)
+    tex_dict = {}
+    for key in haralick_names:
+        tex_dict[key] = np.full(size, np.nan, dtype=float)
 
     for ii in range(size):
         # Haralick texture features
@@ -45,48 +44,48 @@ def haralick_texture_features(image, mask, image_bg=None, image_corr=None):
             # The problem is that a co-occurrence matrix is all-zero (e.g.
             # if the mask is just a one-pixel horizontal line, then the
             # diagonal and vertical co-occurrence matrices do not have any
-            # entries. We just catch the exception and return `nan`s.
-            ret = nan_result
+            # entries. We just catch the exception and keep the `nan`s.
+            continue
         # (1) Angular Second Moment
-        rec_arr["tex_asm_avg"][ii] = ret[0]
-        rec_arr["tex_asm_ptp"][ii] = ret[13]
+        tex_dict["tex_asm_avg"][ii] = ret[0]
+        tex_dict["tex_asm_ptp"][ii] = ret[13]
         # (2) Contrast
-        rec_arr["tex_con_avg"][ii] = ret[1]
-        rec_arr["tex_con_ptp"][ii] = ret[14]
+        tex_dict["tex_con_avg"][ii] = ret[1]
+        tex_dict["tex_con_ptp"][ii] = ret[14]
         # (3) Correlation
-        rec_arr["tex_cor_avg"][ii] = ret[2]
-        rec_arr["tex_cor_ptp"][ii] = ret[15]
+        tex_dict["tex_cor_avg"][ii] = ret[2]
+        tex_dict["tex_cor_ptp"][ii] = ret[15]
         # (4) Variance
-        rec_arr["tex_var_avg"][ii] = ret[3]
-        rec_arr["tex_var_ptp"][ii] = ret[16]
+        tex_dict["tex_var_avg"][ii] = ret[3]
+        tex_dict["tex_var_ptp"][ii] = ret[16]
         # (5) Inverse Difference Moment
-        rec_arr["tex_idm_avg"][ii] = ret[4]
-        rec_arr["tex_idm_ptp"][ii] = ret[17]
+        tex_dict["tex_idm_avg"][ii] = ret[4]
+        tex_dict["tex_idm_ptp"][ii] = ret[17]
         # (6) Feature 6 "Sum Average", which is equivalent to
         # 2 * bright_bc_avg since dclab 0.44.0.
         # (7) Sum Variance
-        rec_arr["tex_sva_avg"][ii] = ret[6]
-        rec_arr["tex_sva_ptp"][ii] = ret[19]
+        tex_dict["tex_sva_avg"][ii] = ret[6]
+        tex_dict["tex_sva_ptp"][ii] = ret[19]
         # (8) Sum Entropy
-        rec_arr["tex_sen_avg"][ii] = ret[7]
-        rec_arr["tex_sen_ptp"][ii] = ret[20]
+        tex_dict["tex_sen_avg"][ii] = ret[7]
+        tex_dict["tex_sen_ptp"][ii] = ret[20]
         # (9) Entropy
-        rec_arr["tex_ent_avg"][ii] = ret[8]
-        rec_arr["tex_ent_ptp"][ii] = ret[21]
+        tex_dict["tex_ent_avg"][ii] = ret[8]
+        tex_dict["tex_ent_ptp"][ii] = ret[21]
         # (10) Feature 10 "Difference Variance" is excluded, because it
         # has a functional dependency on the offset value (we use "1" here)
         # and thus is not really only describing texture.
         # (11) Difference Entropy
-        rec_arr["tex_den_avg"][ii] = ret[10]
-        rec_arr["tex_den_ptp"][ii] = ret[23]
+        tex_dict["tex_den_avg"][ii] = ret[10]
+        tex_dict["tex_den_ptp"][ii] = ret[23]
         # (12) Information Measure of Correlation 1
-        rec_arr["tex_f12_avg"][ii] = ret[11]
-        rec_arr["tex_f12_ptp"][ii] = ret[24]
+        tex_dict["tex_f12_avg"][ii] = ret[11]
+        tex_dict["tex_f12_ptp"][ii] = ret[24]
         # (13) Information Measure of Correlation 2
-        rec_arr["tex_f13_avg"][ii] = ret[12]
-        rec_arr["tex_f13_ptp"][ii] = ret[25]
+        tex_dict["tex_f13_avg"][ii] = ret[12]
+        tex_dict["tex_f13_ptp"][ii] = ret[25]
         # (14) Feature 14 is excluded, because nobody is using it, it is
         # not understood by everyone what it actually is, and it is
         # computationally expensive.
 
-    return rec_arr
+    return tex_dict
