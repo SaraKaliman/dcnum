@@ -32,7 +32,9 @@ class HDF5ImageCache:
         #: This is a FILO cache for the chunks
         self.cache = collections.OrderedDict()
         self.shape = h5ds.shape
-        self._len = len(self.h5ds)
+        self.chunk_shape = (chunk_size,) + self.shape[1:]
+        self._len = self.shape[0]
+        self.num_chunks = int(np.ceil(self._len / self.chunk_size))
 
     def _get_chunk_index_for_index(self, index):
         if index < 0:
@@ -82,8 +84,10 @@ class ImageCorrCache:
         self.image = image
         self.image_bg = image_bg
         self.chunk_size = image.chunk_size
+        self.num_chunks = image.num_chunks
         self.h5ds = image.h5ds
         self.shape = image.shape
+        self.chunk_shape = image.chunk_shape
         #: This is a FILO cache for the corrected image chunks
         self.cache = collections.OrderedDict()
         self.cache_size = image.cache_size
@@ -104,7 +108,8 @@ class ImageCorrCache:
 
     def get_chunk(self, chunk_index):
         if chunk_index not in self.cache:
-            data = np.array(self.image.get_chunk(chunk_index), dtype=int) \
+            data = np.array(
+                self.image.get_chunk(chunk_index), dtype=np.int16) \
                 - self.image_bg.get_chunk(chunk_index)
             self.cache[chunk_index] = data
             if len(self.cache) > self.cache_size:
