@@ -43,8 +43,7 @@ class HDF5WriterThread(threading.Thread):
                 break
             elif len(self.dq):
                 feat, data = self.dq.popleft()
-                self.writer.store_feature_chunk(feat=feat,
-                                                data=data)
+                self.writer.store_feature_chunk(feat=feat, data=data)
             elif self.may_stop_loop:
                 break
             else:

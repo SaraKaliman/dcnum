@@ -75,6 +75,8 @@ class HDF5Writer:
         The "chunk" implies that always chunks of data are stored,
         never single events.
         """
+        if feat == "mask" and data.dtype == bool:
+            data = 255 * np.array(data, dtype=np.uint8)
         ds, offset = self.require_feature(feat=feat,
                                           item_shape=data.shape[1:],
                                           dtype=data.dtype)
