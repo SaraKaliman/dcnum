@@ -7,6 +7,7 @@ from .common import haralick_names
 def haralick_texture_features(image, mask, image_bg=None, image_corr=None):
     # make sure we have a boolean array
     mask = np.array(mask, dtype=bool)
+    size = mask.shape[0]
 
     # compute features if necessary
     if image_bg is not None or image_corr is not None:
@@ -14,11 +15,9 @@ def haralick_texture_features(image, mask, image_bg=None, image_corr=None):
         if image_corr is None:
             image_corr = np.array(image, dtype=np.int16) - image_bg
 
-    size = image.shape[0]
-
     tex_dict = {}
     for key in haralick_names:
-        tex_dict[key] = np.full(size, np.nan, dtype=float)
+        tex_dict[key] = np.full(size, np.nan, dtype=np.float64)
 
     for ii in range(size):
         # Haralick texture features
@@ -28,8 +27,12 @@ def haralick_texture_features(image, mask, image_bg=None, image_corr=None):
         # - add grayscale values (negative values not supported)
         #   -> maximum value should be as small as possible
         # - set pixels outside contour to zero (ignored areas, see mahotas)
-        imcoi = image_corr[ii]
         maski = mask[ii]
+        if image_corr.shape[0] == 1:
+            # We have several masks for one image.
+            imcoi = image_corr[0]
+        else:
+            imcoi = image_corr[ii]
         minval = imcoi[maski].min()
         imi = np.array((imcoi - minval + 1) * maski, dtype=np.uint8)
         try:
