@@ -226,7 +226,8 @@ class QueueEventExtractor:
                 return None
         masks = self.get_masks_from_label(label)
         if masks.size:
-            events = self.get_events_from_masks(masks=masks, data_index=index)
+            events = self.get_events_from_masks(
+                masks=masks, data_index=index, **self.extract_kwargs)
         else:
             events = None
         return events
