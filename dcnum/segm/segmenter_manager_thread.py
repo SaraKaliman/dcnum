@@ -29,7 +29,7 @@ class SegmenterManagerThread(threading.Thread):
             The image data to use. This can be background-corrected
             or not (hence the type hint), depending on `segmenter`
         slot_states:
-            This is a utf-8 shared array whose length defines how many slots
+            This is an utf-8 shared array whose length defines how many slots
             are available. The segmenter will only ever perform the
             segmentation for a free slot. A free slot means a value of "s"
             (for "task is with segmenter"). After the segmenter has done
