@@ -1,5 +1,6 @@
 0.0.8
  - enh: minor improvements for HDF5ImageCache and ImageCorrCache
+ - enh: use data size as cache size if smaller than requested chunk size
  - ref: haralick texture computation now returns dict instead of recarray
 0.0.7
  - enh: dataset keyword arguments and mode HDF5WriterThread

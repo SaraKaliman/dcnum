@@ -25,6 +25,7 @@ class HDF5ImageCache:
         # TODO:
         # - adjust chunking to multiples of the chunks in the dataset
         #   (which will slightly speed up things)
+        chunk_size = min(h5ds.shape[0], chunk_size)
         self.h5ds = h5ds
         self.chunk_size = chunk_size
         self.boolean = boolean
@@ -32,6 +33,7 @@ class HDF5ImageCache:
         #: This is a FILO cache for the chunks
         self.cache = collections.OrderedDict()
         self.shape = h5ds.shape
+        self.image_shape = self.shape[1:]
         self.chunk_shape = (chunk_size,) + self.shape[1:]
         self._len = self.shape[0]
         self.num_chunks = int(np.ceil(self._len / self.chunk_size))
