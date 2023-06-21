@@ -1,6 +1,8 @@
 0.0.8
  - enh: minor improvements for HDF5ImageCache and ImageCorrCache
  - enh: use data size as cache size if smaller than requested chunk size
+ - enh: return dictionary for brightness feature computation
+ - enh: allow to pass a single image for brightness feature computation
  - ref: haralick texture computation now returns dict instead of recarray
 0.0.7
  - enh: dataset keyword arguments and mode HDF5WriterThread
