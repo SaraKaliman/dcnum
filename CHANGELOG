@@ -1,5 +1,6 @@
 0.0.8
  - feat: introduce QueueCollectorThread
+ - feat: introduce SegmenterManagerThread
  - enh: minor improvements for HDF5ImageCache and ImageCorrCache
  - enh: use data size as cache size if smaller than requested chunk size
  - enh: return dictionary for brightness feature computation
