@@ -1,5 +1,6 @@
 import abc
 import multiprocessing as mp
+import os
 import time
 import threading
 
@@ -120,7 +121,7 @@ class CPUSegmenter(Segmenter, abc.ABC):
             stop = len(image_data)
 
         batch_size = stop - start
-        size = np.prod(image_data[0]) * batch_size
+        size = np.prod(image_data.shape[1:]) * batch_size
 
         if self.image_shape is None:
             self.image_shape = image_data[0].shape
@@ -232,6 +233,7 @@ class CPUSegmenterWorker:
         self.sl_stop = sl_stop
 
     def run(self):
+        print(f"Running {self} in PID {os.getpid()}")
         # We have to create the numpy-versions of the mp.RawArrays here,
         # otherwise we only get some kind of copy in the new process
         # when we use "spawn" instead of "fork".
@@ -268,5 +270,5 @@ class CPUSegmenterWorkerProcess(CPUSegmenterWorker, mp.Process):
 
 
 class CPUSegmenterWorkerThread(CPUSegmenterWorker, threading.Thread):
-    def __init__(self, *args):
-        super(CPUSegmenterWorkerThread, self).__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super(CPUSegmenterWorkerThread, self).__init__(*args, **kwargs)
