@@ -6,7 +6,7 @@ import time
 from .writer import HDF5Writer
 
 
-class HDF5WriterThread(threading.Thread):
+class DequeWriterThread(threading.Thread):
     def __init__(self,
                  path_out: pathlib.Path,
                  dq: collections.deque,
@@ -23,7 +23,7 @@ class HDF5WriterThread(threading.Thread):
             `collections.deque` object from which data are taken
             using `popleft()`.
         """
-        super(HDF5WriterThread, self).__init__(*args, **kwargs)
+        super(DequeWriterThread, self).__init__(*args, **kwargs)
         self.writer = HDF5Writer(path_out, mode=mode, ds_kwds=ds_kwds)
         self.dq = dq
         self.may_stop_loop = False

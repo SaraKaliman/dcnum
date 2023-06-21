@@ -1,4 +1,5 @@
 0.0.8
+ - feat: introduce QueueCollectorThread
  - enh: minor improvements for HDF5ImageCache and ImageCorrCache
  - enh: use data size as cache size if smaller than requested chunk size
  - enh: return dictionary for brightness feature computation
@@ -6,6 +7,7 @@
  - enh: allow to pass a single image for texture feature computation
  - enh: make sure that masks are written as uint8 to HDF5 files
  - ref: haralick texture computation now returns dict instead of recarray
+ - ref: renamed HDF5WriterThread to DequeWriterThread
 0.0.7
  - enh: dataset keyword arguments and mode HDF5WriterThread
  - enh: speed-up of brightness feature computation
