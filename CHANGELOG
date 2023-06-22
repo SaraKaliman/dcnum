@@ -1,5 +1,6 @@
 0.0.9
  - fix: properly prolagate event extraction keyword arguments
+ - fix: QueueCollectorThread used uint16 for enumerating indices
 0.0.8
  - feat: introduce QueueCollectorThread
  - feat: introduce SegmenterManagerThread

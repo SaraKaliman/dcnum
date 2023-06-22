@@ -42,7 +42,7 @@ class EventStash:
         self.index_offset = index_offset
         #: Array containing the indices in the original data instance
         #: that correspond to the events in `events`.
-        self.indices_for_data = np.zeros(self.size, dtype=np.uint16)
+        self.indices_for_data = np.zeros(self.size, dtype=np.uint32)
         # Private array that tracks the progress.
         self._tracker = np.zeros(self.num_frames, dtype=bool)
 
@@ -179,7 +179,7 @@ class QueueCollectorThread(threading.Thread):
                           cur_frame:cur_frame + self.write_threshold]
             if np.any(np.array(cur_nevents) < 0):
                 # We are not yet ready to write any new data to the queue.
-                time.sleep(.1)
+                time.sleep(.01)
                 continue
 
             if len(cur_nevents) == 0:
@@ -256,7 +256,6 @@ class QueueCollectorThread(threading.Thread):
                                    np.array(stash.feat_nevents)[
                                        indices - stash.index_offset]
                                    ))
-
             # Update events/frames written (used for monitoring)
             self.written_events += stash.size
             self.written_frames += stash.num_frames
