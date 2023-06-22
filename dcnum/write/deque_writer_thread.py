@@ -48,5 +48,5 @@ class DequeWriterThread(threading.Thread):
                 break
             else:
                 # wait for the next item to arrive
-                time.sleep(.5)
+                time.sleep(.1)
         self.writer.close()

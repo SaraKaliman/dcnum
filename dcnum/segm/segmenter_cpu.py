@@ -189,7 +189,7 @@ class CPUSegmenter(Segmenter, abc.ABC):
 
         # Wait for all workers to complete
         while self.mp_batch_worker.value != num_workers:
-            time.sleep(.1)
+            time.sleep(.01)
 
         return self._mp_labels_np
 
@@ -233,7 +233,7 @@ class CPUSegmenterWorker:
         self.sl_stop = sl_stop
 
     def run(self):
-        print(f"Running {self} in PID {os.getpid()}")
+        # print(f"Running {self} in PID {os.getpid()}")
         # We have to create the numpy-versions of the mp.RawArrays here,
         # otherwise we only get some kind of copy in the new process
         # when we use "spawn" instead of "fork".
@@ -261,7 +261,7 @@ class CPUSegmenterWorker:
                 break
             else:
                 # Wait for more data to arrive
-                time.sleep(.03)
+                time.sleep(.01)
 
 
 class CPUSegmenterWorkerProcess(CPUSegmenterWorker, mp.Process):

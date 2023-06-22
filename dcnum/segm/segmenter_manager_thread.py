@@ -94,7 +94,7 @@ class SegmenterManagerThread(threading.Thread):
                 if empty_slots >= num_slots:
                     # There is nothing to do, try to avoid 100% CPU
                     empty_slots = 0
-                    time.sleep(.1)
+                    time.sleep(.01)
 
             # We have a free slot to compute the segmentation
             labels = self.segmenter.segment_chunk(

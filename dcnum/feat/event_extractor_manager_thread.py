@@ -98,7 +98,7 @@ class EventExtractorManagerThread(threading.Thread):
                 if unavailable_slots >= num_slots:
                     # There is nothing to do, try to avoid 100% CPU
                     unavailable_slots = 0
-                    time.sleep(.1)
+                    time.sleep(.01)
 
             # We have a chunk, process it!
             chunk = self.slot_chunks[cur_slot]
@@ -117,7 +117,7 @@ class EventExtractorManagerThread(threading.Thread):
 
             # Make sure the entire chunk has been processed.
             while self.raw_queue.qsize():
-                time.sleep(.1)
+                time.sleep(.01)
 
             # We are done here. The segmenter may continue its deed.
             self.slot_states[cur_slot] = "w"
