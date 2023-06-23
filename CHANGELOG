@@ -1,5 +1,5 @@
 0.0.9
- - fix: properly prolagate event extraction keyword arguments
+ - fix: properly propagate event extraction keyword arguments
  - fix: QueueCollectorThread used uint16 for enumerating indices
  - fix: handle case where number of events is not multiple of chunk_size
  - enh: reduce thread waiting times
