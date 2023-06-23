@@ -57,7 +57,7 @@ class HDF5ImageCache:
         return self._len
 
     def get_chunk(self, chunk_index):
-        """Get one chunk of images"""
+        """Return one chunk of images"""
         if chunk_index not in self.cache:
             fslice = slice(self.chunk_size * chunk_index,
                            self.chunk_size * (chunk_index + 1)
@@ -70,6 +70,16 @@ class HDF5ImageCache:
                 # Remove the first item
                 self.cache.popitem(last=False)
         return self.cache[chunk_index]
+
+    def get_chunk_size(self, chunk_index):
+        """Return the number of images in this chunk"""
+        if chunk_index < self.num_chunks - 1:
+            return self.chunk_size
+        else:
+            chunk_size = self._len - chunk_index*self.chunk_size
+            if chunk_size < 0:
+                raise IndexError(f"{self} only has {self.num_chunks} chunks!")
+            return chunk_size
 
     def iter_chunks(self):
         size = self.h5ds.shape[0]

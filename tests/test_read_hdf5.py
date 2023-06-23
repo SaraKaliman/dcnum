@@ -65,6 +65,24 @@ def test_image_cache_index_out_of_range(tmp_path):
             hic.__getitem__(20)
 
 
+def test_image_chache_get_chunk_size(tmp_path):
+    path = tmp_path / "test.hdf5"
+    size = 20
+    chunk_size = 8
+    with h5py.File(path, "w") as hw:
+        hw["events/image"] = np.random.rand(size, 80, 180)
+    with h5py.File(path, "r") as h5:
+        hic = read.HDF5ImageCache(h5["events/image"],
+                                  chunk_size=chunk_size,
+                                  cache_size=2)
+        # Get something from first chunk. This should just work
+        assert hic.get_chunk_size(0) == 8
+        assert hic.get_chunk_size(1) == 8
+        assert hic.get_chunk_size(2) == 4
+        with pytest.raises(IndexError, match="only has 3 chunks"):
+            hic.get_chunk_size(3)
+
+
 @pytest.mark.parametrize("size, chunks", [(209, 21),
                                           (210, 21),
                                           (211, 22)])

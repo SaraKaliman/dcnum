@@ -112,7 +112,7 @@ class EventExtractorManagerThread(threading.Thread):
             else:
                 raise ValueError("labels_list contains bad size data!")
             # Let the workers know there is work
-            for ii in range(self.data.image.chunk_size):
+            for ii in range(self.data.image.get_chunk_size(chunk)):
                 self.raw_queue.put((chunk, ii))
 
             # Make sure the entire chunk has been processed.
