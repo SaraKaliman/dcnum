@@ -40,7 +40,11 @@ class HDF5ImageCache:
 
     def _get_chunk_index_for_index(self, index):
         if index < 0:
-            index = len(self.h5ds) + index
+            index = self._len + index
+        elif index >= self._len:
+            raise IndexError(
+                f"Index {index} out of bounds for HDF5ImageCache "
+                f"of size {self._len}")
         chunk_index = index // self.chunk_size
         sub_index = index % self.chunk_size
         return chunk_index, sub_index
