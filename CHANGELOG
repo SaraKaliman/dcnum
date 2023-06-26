@@ -1,3 +1,5 @@
+0.10.1
+ - fix: handle bytes-values in HDF5 attributes
 0.10.0
  - enh: some minor improvements in efficiency
  - ref: increment DCNUM_PPID_GENERATION for the sake of clarity
