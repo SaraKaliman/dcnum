@@ -91,6 +91,9 @@ class HDF5Data:
                            locking=False,
                            ) as h5:
                 self.meta = dict(h5.attrs)
+                for key in self.meta:
+                    if isinstance(self.meta[key], bytes):
+                        self.meta[key] = self.meta[key].decode("utf-8")
                 for key in h5.get("logs", []):
                     alog = list(h5["logs"][key])
                     if isinstance(alog[0], bytes):
