@@ -16,8 +16,9 @@ def haralick_texture_features(image, mask, image_bg=None, image_corr=None):
             image_corr = np.array(image, dtype=np.int16) - image_bg
 
     tex_dict = {}
+    empty = np.full(size, np.nan, dtype=np.float64)
     for key in haralick_names:
-        tex_dict[key] = np.full(size, np.nan, dtype=np.float64)
+        tex_dict[key] = np.copy(empty)
 
     for ii in range(size):
         # Haralick texture features

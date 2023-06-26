@@ -180,8 +180,9 @@ class QueueEventExtractor:
 
     def get_masks_from_label(self, label):
         """Get masks, performing mask-based gating"""
-        lmax = np.max(label)
+        # Using np.unique is a little slower than iterating over lmax
         # unu = np.unique(label)  # background is 0
+        lmax = np.max(label)
         masks = []
         for jj in range(1, lmax+1):  # first item is 0
             mask_jj = label == jj
