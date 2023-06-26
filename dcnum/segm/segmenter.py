@@ -19,8 +19,8 @@ class Segmenter(abc.ABC):
     #: Default keyword arguments for mask post-processing. See `process_mask`
     #: for available options.
     mask_default_kwargs = {}
-    #: If the segmenter requires a background image, set this to True
-    requires_background = False
+    #: If the segmenter requires a background-corrected image, set this to True
+    requires_background_correction = False
 
     def __init__(self, kwargs_mask=None, debug=False, **kwargs):
         """Base segemnter
@@ -232,7 +232,7 @@ class Segmenter(abc.ABC):
     def segment_approach(image):
         """Perform segmentation and return integer label or binary mask image
 
-        This is the approach the subclasses implements.
+        This is the approach the subclasses implement.
         """
 
     @abc.abstractmethod
