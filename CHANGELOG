@@ -2,6 +2,7 @@
  - feat: introduce GPUSegmenter base class
  - fix: handle bytes-values in HDF5 attributes
  - ref: correctly introduce `requires_background_correction` for segmenters
+ - setup: don't requrie cibuildwheel
 0.10.0
  - enh: some minor improvements in efficiency
  - ref: increment DCNUM_PPID_GENERATION for the sake of clarity
