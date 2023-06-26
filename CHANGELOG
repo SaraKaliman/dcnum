@@ -1,4 +1,5 @@
-0.10.1
+0.11.0
+ - feat: introduce GPUSegmenter base class
  - fix: handle bytes-values in HDF5 attributes
  - ref: correctly introduce `requires_background_correction` for segmenters
 0.10.0

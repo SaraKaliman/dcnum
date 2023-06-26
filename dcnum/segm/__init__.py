@@ -3,6 +3,7 @@ import functools
 
 from .segmenter import Segmenter
 from .segmenter_cpu import CPUSegmenter
+from .segmenter_gpu import GPUSegmenter
 from .segmenter_manager_thread import SegmenterManagerThread
 from . import segm_thresh
 
