@@ -86,7 +86,10 @@ class HDF5Data:
             self.logs = {}
             self.tables = {}
             # get dataset configuration
-            with h5py.File(self.path) as h5:
+            with h5py.File(self.path,
+                           libver="latest",
+                           locking=False,
+                           ) as h5:
                 self.meta = dict(h5.attrs)
                 for key in h5.get("logs", []):
                     alog = list(h5["logs"][key])

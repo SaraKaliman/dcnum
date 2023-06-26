@@ -24,6 +24,8 @@ class DequeWriterThread(threading.Thread):
             using `popleft()`.
         """
         super(DequeWriterThread, self).__init__(*args, **kwargs)
+        if mode == "w":
+            path_out.unlink(missing_ok=True)
         self.writer = HDF5Writer(path_out, mode=mode, ds_kwds=ds_kwds)
         self.dq = dq
         self.may_stop_loop = False
