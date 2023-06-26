@@ -180,12 +180,13 @@ class QueueEventExtractor:
 
     def get_masks_from_label(self, label):
         """Get masks, performing mask-based gating"""
-        unu = np.unique(label)  # background is 0
+        lmax = np.max(label)
+        # unu = np.unique(label)  # background is 0
         masks = []
-        for jj in unu[1:]:  # first item is 0
+        for jj in range(1, lmax+1):  # first item is 0
             mask_jj = label == jj
-            # mask-based gating
-            if self.gate.gate_mask(mask_jj):
+            mask_sum = np.sum(mask_jj)
+            if mask_sum and self.gate.gate_mask(mask_jj, mask_sum=mask_sum):
                 masks.append(mask_jj)
         return np.array(masks)
 

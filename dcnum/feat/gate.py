@@ -157,6 +157,16 @@ class Gate:
             raise ValueError("Empty events provided!")
         return valid
 
-    def gate_mask(self, mask):
-        """Gate the mask, return False if the mask should not be used"""
-        return np.sum(mask) > self.kwargs["size_thresh_mask"]
+    def gate_mask(self, mask, mask_sum=None):
+        """Gate the mask, return False if the mask should not be used
+
+        Parameters
+        ----------
+        mask: 2d ndarray
+            The boolean mask image for the event.
+        mask_sum: int
+            The sum of the mask (if not specified, it is computed)
+        """
+        if mask_sum is None:
+            mask_sum = np.sum(mask)
+        return mask_sum > self.kwargs["size_thresh_mask"]
