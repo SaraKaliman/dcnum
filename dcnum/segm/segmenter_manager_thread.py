@@ -99,8 +99,7 @@ class SegmenterManagerThread(threading.Thread):
             # We have a free slot to compute the segmentation
             labels = self.segmenter.segment_chunk(
                 image_data=self.image_data,
-                chunk=chunk,
-                debug=self.debug)
+                chunk=chunk)
 
             # TODO: make this more memory efficient (pre-shared mp.Arrays?)
             # Store labels in a list accessible by the main thread

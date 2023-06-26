@@ -10,11 +10,9 @@ from .segmenter import Segmenter
 
 
 class CPUSegmenter(Segmenter, abc.ABC):
-    #: Number of segmenter processes to use.
-    num_processes = None
-
-    def __init__(self, *args, **kwargs):
+    def __init__(self, num_workers=None, *args, **kwargs):
         super(CPUSegmenter, self).__init__(*args, **kwargs)
+        self.num_workers = num_workers or mp.cpu_count()
         self.mp_image_raw = None
         self._mp_image_np = None
         self.mp_labels_raw = None
@@ -96,8 +94,7 @@ class CPUSegmenter(Segmenter, abc.ABC):
     def segment_batch(self,
                       image_data: np.ndarray,
                       start: int = None,
-                      stop: int = None,
-                      debug: bool = False):
+                      stop: int = None):
         """Perform batch segmentation of `image_data`
 
         Parameters
@@ -108,8 +105,6 @@ class CPUSegmenter(Segmenter, abc.ABC):
             First index to analyze in `image_data`
         stop: int
             Index after the last index to analyze in `image_data`
-        debug: bool
-            Whether to run this in debug mode (using a single thread)
 
         Notes
         -----
@@ -156,13 +151,12 @@ class CPUSegmenter(Segmenter, abc.ABC):
         self._mp_image_np[:] = image_data[start:stop]
 
         # Create the workers
-        if debug:
+        if self.debug:
             worker_cls = CPUSegmenterWorkerThread
             num_workers = 1
         else:
             worker_cls = CPUSegmenterWorkerProcess
-            num_workers = min(self.num_processes or mp.cpu_count(),
-                              image_data.shape[0])
+            num_workers = min(self.num_workers, image_data.shape[0])
 
         if not self._mp_workers:
             step_size = batch_size // num_workers

@@ -80,9 +80,10 @@ def test_segm_thresh_segment_batch(worker_type):
     image_u_c = np.array(image_u, dtype=int) - image_bg_u
 
     sm = segm.segm_thresh.SegmentThresh(thresh=-6,
+                                        debug=debug,
                                         kwargs_mask={"closing_disk": 3})
 
-    labels_seg = sm.segment_batch(image_u_c, start=0, stop=5, debug=debug)
+    labels_seg = sm.segment_batch(image_u_c, start=0, stop=5)
     assert labels_seg is sm.labels_array
     assert np.all(np.array(labels_seg, dtype=bool) == sm.mask_array)
     # tell workers to stop
@@ -106,10 +107,11 @@ def test_segm_thresh_segment_batch_large(worker_type):
     image = -10 * mask
 
     sm = segm.segm_thresh.SegmentThresh(thresh=-6,
-                                        kwargs_mask={"closing_disk": 3})
+                                        kwargs_mask={"closing_disk": 3},
+                                        debug=debug)
 
     labels_seg_1 = np.copy(
-        sm.segment_batch(image, start=0, stop=101, debug=debug))
+        sm.segment_batch(image, start=0, stop=101))
 
     assert labels_seg_1.dtype == np.uint16  # uint8 is not enough
     assert sm.mp_batch_index.value == 0
@@ -123,7 +125,7 @@ def test_segm_thresh_segment_batch_large(worker_type):
         assert sm.mp_batch_worker.value == mp.cpu_count()
 
     labels_seg_2 = np.copy(
-        sm.segment_batch(image, start=101, stop=121, debug=debug))
+        sm.segment_batch(image, start=101, stop=121))
 
     # tell workers to stop
     sm.join_workers()

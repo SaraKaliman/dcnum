@@ -194,10 +194,10 @@ class Segmenter(abc.ABC):
 
         return labels
 
-    def segment_chunk(self, image_data, chunk, debug=False):
+    def segment_chunk(self, image_data, chunk):
         """Return the integer labels for one `image_data` chunk"""
         data = image_data.get_chunk(chunk)
-        return self.segment_batch(data, debug=debug)
+        return self.segment_batch(data)
 
     def segment_frame(self, image):
         """Return the integer label image for `index`"""
@@ -236,5 +236,5 @@ class Segmenter(abc.ABC):
         """
 
     @abc.abstractmethod
-    def segment_batch(self, data, start=None, stop=None, debug=False):
+    def segment_batch(self, data, start=None, stop=None):
         """Return the integer labels for an entire batch"""
