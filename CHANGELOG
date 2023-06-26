@@ -1,4 +1,5 @@
 0.0.10
+ - enh: some minor improvements in efficiency
  - ref: increment DCNUM_PPID_GENERATION for the sake of clarity
  - ref: unify dealing with num_workers and debugging
 0.0.9
