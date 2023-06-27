@@ -173,7 +173,9 @@ class Segmenter(abc.ABC):
             labels_uint8 = np.array(labels, dtype=np.uint8)
             labels_dilated = cv2.dilate(labels_uint8, element)
             labels_eroded = cv2.erode(labels_dilated, element)
-            labels, _ = ndi.label(labels_eroded > 0)
+            labels, _ = ndi.label(
+                input=labels_eroded > 0,
+                structure=ndi.generate_binary_structure(2, 2))
 
         if fill_holes:
             # Floodfill only works with uint8 (too small) or int32
@@ -206,7 +208,7 @@ class Segmenter(abc.ABC):
         mol = segm_wrap(image)
         if mol.dtype == bool:
             # convert mask to label
-            labels, num_labels = ndi.label(
+            labels, _ = ndi.label(
                 input=mol,
                 structure=ndi.generate_binary_structure(2, 2))
         else:

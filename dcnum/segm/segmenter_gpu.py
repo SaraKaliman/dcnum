@@ -2,6 +2,7 @@ import abc
 import pathlib
 
 import numpy as np
+import scipy.ndimage as ndi
 
 
 from .segmenter import Segmenter
@@ -10,7 +11,7 @@ from .segmenter import Segmenter
 class GPUSegmenter(Segmenter, abc.ABC):
     mask_postprocessing = False
 
-    def __init__(self, model_file, *args, **kwargs):
+    def __init__(self, model_file=None, *args, **kwargs):
         super(GPUSegmenter, self).__init__(*args, **kwargs)
         self.model_path = self._get_model_path(model_file)
 
@@ -28,6 +29,18 @@ class GPUSegmenter(Segmenter, abc.ABC):
             stop = len(image_data)
 
         image_slice = image_data[start:stop]
-        segm = self.segment_frame_wrapper(self.model_path)
+        segm = self.segment_frame_wrapper()
 
-        return segm(image_slice)
+        labels = segm(image_slice)
+
+        # Make sure we have integer labels
+        if labels.dtype == bool:
+            new_labels = np.zeros_like(labels, dtype=np.uint16)
+            for ii in range(len(labels)):
+                ndi.label(
+                    input=labels[ii],
+                    output=new_labels[ii],
+                    structure=ndi.generate_binary_structure(2, 2))
+            labels = new_labels
+
+        return labels

@@ -1,3 +1,5 @@
+0.11.1
+ - fix: fix GPUSegmenter labeling
 0.11.0
  - feat: introduce GPUSegmenter base class
  - fix: handle bytes-values in HDF5 attributes
