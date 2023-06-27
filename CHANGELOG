@@ -1,3 +1,5 @@
+0.11.2
+ - enh: record and log execution time of segmentation and feature extraction
 0.11.1
  - fix: fix GPUSegmenter labeling
 0.11.0

@@ -65,7 +65,8 @@ class EventExtractorManagerThread(threading.Thread):
         self.label_array = np.ctypeslib.as_array(
             self.fe_kwargs["label_array"]).reshape(
             self.data.image.chunk_shape)
-
+        #: Time counter for feature extraction
+        self.t_count = 0
         #: Whether debugging is enabled
         self.debug = debug
 
@@ -100,6 +101,8 @@ class EventExtractorManagerThread(threading.Thread):
                     unavailable_slots = 0
                     time.sleep(.1)
 
+            t1 = time.monotonic()
+
             # We have a chunk, process it!
             chunk = self.slot_chunks[cur_slot]
             # Populate the labeling array for the workers
@@ -123,8 +126,10 @@ class EventExtractorManagerThread(threading.Thread):
             self.slot_states[cur_slot] = "w"
 
             self.logger.debug(f"Extracted one chunk: {chunk}")
+            self.t_count += time.monotonic() - t1
 
             chunks_processed += 1
+
             if chunks_processed == self.data.image.num_chunks:
                 break
 
@@ -132,3 +137,4 @@ class EventExtractorManagerThread(threading.Thread):
         self.fe_kwargs["finalize_extraction"].value = True
         [w.join() for w in workers]
         self.logger.debug("Finished extraction.")
+        self.logger.info(f"Extraction time: {self.t_count:.1f}s")

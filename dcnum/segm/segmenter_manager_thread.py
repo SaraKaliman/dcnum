@@ -71,6 +71,8 @@ class SegmenterManagerThread(threading.Thread):
         self.slot_chunks = slot_chunks
         #: List containing the segmented labels of each slot
         self.labels_list = [None] * len(self.slot_states)
+        #: Time counter for segmentation
+        self.t_count = 0
         #: Whether running in debugging mode
         self.debug = debug
 
@@ -96,6 +98,8 @@ class SegmenterManagerThread(threading.Thread):
                     empty_slots = 0
                     time.sleep(.01)
 
+            t1 = time.monotonic()
+
             # We have a free slot to compute the segmentation
             labels = self.segmenter.segment_chunk(
                 image_data=self.image_data,
@@ -111,7 +115,11 @@ class SegmenterManagerThread(threading.Thread):
             self.slot_states[cur_slot] = "e"
             self.logger.debug(f"Segmented one chunk: {chunk}")
 
+            self.t_count += time.monotonic() - t1
+
         # Cleanup
         if isinstance(self.segmenter, CPUSegmenter):
             # Join the segmentation workers.
             self.segmenter.join_workers()
+
+        self.logger.info(f"Segmentation time: {self.t_count:.1f}s")
