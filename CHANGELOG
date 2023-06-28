@@ -1,4 +1,5 @@
 0.11.2
+ - enh: add context manager for CPUSegmenter
  - enh: record and log execution time of segmentation and feature extraction
 0.11.1
  - fix: fix GPUSegmenter labeling

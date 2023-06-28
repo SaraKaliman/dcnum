@@ -31,6 +31,12 @@ class CPUSegmenter(Segmenter, abc.ABC):
         # Tells the workers to stop
         self.mp_shutdown = mp.Value("i", 0)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.join_workers()
+
     def __getstate__(self):
         # Copy the object's state from self.__dict__ which contains
         # all our instance attributes. Always use the dict.copy()
