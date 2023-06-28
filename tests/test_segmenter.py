@@ -208,3 +208,18 @@ def test_segmenter_segment_chunk():
         assert sm.image_array.min() == -20
         assert np.all(labels_1 == 0)
         assert not np.all(labels_2 == 0)
+
+
+def test_cpu_segmenter_getsetstate():
+    sm1 = segm.segm_thresh.SegmentThresh(thresh=-12, debug=True)
+    with segm.segm_thresh.SegmentThresh(thresh=-12, debug=True) as sm2:
+        image_data = MockImageData()
+        # Do some processing so that we have workers
+        sm2.segment_chunk(image_data, 0)
+        # get the state
+        state = sm2.__getstate__()
+        # set the state
+        sm1.__setstate__(state)
+        # and here we test for the raw data that was transferred
+        assert not np.all(sm1.image_array == sm2.image_array)
+        assert np.all(sm1.mp_image_raw == sm2.mp_image_raw)
