@@ -53,7 +53,7 @@ class CPUSegmenter(Segmenter, abc.ABC):
         return state
 
     def __setstate__(self, state):
-        # Restore instance attributes (i.e., filename and lineno).
+        # Restore instance attributes
         self.__dict__.update(state)
 
     @staticmethod
