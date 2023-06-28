@@ -275,3 +275,34 @@ def test_segm_thresh_labeled_mask_closing_disk():
     assert np.sum(labels4 == 1) == 9
     assert np.sum(labels4 == 2) == 8
     assert np.sum(labels4 == 3) == 23
+
+
+def test_segm_thresh_labeled_mask_fill_holes_int32():
+    mask = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 1, 0, 1, 0, 0, 0],  # filled, 1
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 1],
+        [0, 0, 0, 0, 0, 1, 1, 1],  # border, 2
+        [0, 0, 0, 0, 0, 1, 1, 1],
+        [0, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],  # other, 3
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=bool)
+
+    sm1 = segm.segm_thresh.SegmentThresh(thresh=-6)
+    labels = np.array(sm1.segment_frame(-10 * mask), dtype=np.int64)
+    # sanity checks
+    assert labels.dtype == np.int64
+    assert labels.dtype != np.int32
+    labels_2 = sm1.process_mask(labels,
+                                clear_border=False,
+                                fill_holes=True,
+                                closing_disk=False)
+    assert np.allclose(labels, labels_2)
+    assert labels_2.dtype == np.int32

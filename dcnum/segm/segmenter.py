@@ -179,7 +179,7 @@ class Segmenter(abc.ABC):
 
         if fill_holes:
             # Floodfill only works with uint8 (too small) or int32
-            if not labels.dtype == np.int32:
+            if labels.dtype != np.int32:
                 labels = np.array(labels, dtype=np.int32)
             #
             # from scipy import ndimage
