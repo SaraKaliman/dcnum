@@ -1,6 +1,7 @@
 0.11.2
  - enh: add context manager for CPUSegmenter
  - enh: record and log execution time of segmentation and feature extraction
+ - enh: properly handle border case for computing contour-moments
  - tests: do not use numba's JIT during testing (coverage)
 0.11.1
  - fix: fix GPUSegmenter labeling

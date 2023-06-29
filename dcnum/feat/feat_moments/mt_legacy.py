@@ -10,22 +10,25 @@ def moments_based_features(mask, pixel_size):
 
     size = mask.shape[0]
 
-    deform = np.zeros(size, dtype=float)
-    size_x = np.zeros(size, dtype=float)
-    size_y = np.zeros(size, dtype=float)
-    pos_x = np.zeros(size, dtype=float)
-    pos_y = np.zeros(size, dtype=float)
-    area_msd = np.zeros(size, dtype=float)
-    area_ratio = np.zeros(size, dtype=float)
-    area_um = np.zeros(size, dtype=float)
-    aspect = np.zeros(size, dtype=float)
-    tilt = np.zeros(size, dtype=float)
-    inert_ratio_cvx = np.zeros(size, dtype=float)
-    inert_ratio_raw = np.zeros(size, dtype=float)
-    inert_ratio_prnc = np.zeros(size, dtype=float)
+    empty = np.full(size, np.nan, dtype=np.float64)
+    deform = np.copy(empty)
+    size_x = np.copy(empty)
+    size_y = np.copy(empty)
+    pos_x = np.copy(empty)
+    pos_y = np.copy(empty)
+    area_msd = np.copy(empty)
+    area_ratio = np.copy(empty)
+    area_um = np.copy(empty)
+    aspect = np.copy(empty)
+    tilt = np.copy(empty)
+    inert_ratio_cvx = np.copy(empty)
+    inert_ratio_raw = np.copy(empty)
+    inert_ratio_prnc = np.copy(empty)
 
     for ii in range(size):
         cont_raw = contour_single_opencv(mask[ii])
+        if len(cont_raw.shape) < 2:
+            continue
         mu_raw = cv2.moments(cont_raw)
 
         # convex hull
