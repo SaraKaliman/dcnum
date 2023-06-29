@@ -4,16 +4,16 @@ import numpy as np
 from .common import haralick_names
 
 
-def haralick_texture_features(image, mask, image_bg=None, image_corr=None):
+def haralick_texture_features(
+        mask, image=None, image_bg=None, image_corr=None):
     # make sure we have a boolean array
     mask = np.array(mask, dtype=bool)
     size = mask.shape[0]
 
     # compute features if necessary
-    if image_bg is not None or image_corr is not None:
+    if image_bg is not None and image is not None and image_corr is None:
         # Background-corrected brightness values
-        if image_corr is None:
-            image_corr = np.array(image, dtype=np.int16) - image_bg
+        image_corr = np.array(image, dtype=np.int16) - image_bg
 
     tex_dict = {}
     empty = np.full(size, np.nan, dtype=np.float64)
@@ -29,6 +29,9 @@ def haralick_texture_features(image, mask, image_bg=None, image_corr=None):
         #   -> maximum value should be as small as possible
         # - set pixels outside contour to zero (ignored areas, see mahotas)
         maski = mask[ii]
+        if not np.any(maski):
+            # The mask is empty (nan values)
+            continue
         if image_corr.shape[0] == 1:
             # We have several masks for one image.
             imcoi = image_corr[0]
