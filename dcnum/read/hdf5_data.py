@@ -31,9 +31,6 @@ class HDF5Data:
         if isinstance(path, h5py.File):
             self.h5 = path
             path = path.filename
-        else:
-            self.h5 = None  # is set in __setstate__
-        self._cache_scalar = {}
         self.__setstate__({"path": path,
                            "pixel_size": pixel_size,
                            "md5_5m": md5_5m,
@@ -69,7 +66,25 @@ class HDF5Data:
             warnings.warn(f"Feature {feat} not cached (possibly slow)")
             return self.h5["events"][feat]
 
+    def __getstate__(self):
+        return {"path": self.path,
+                "pixel_size": self.pixel_size,
+                "md5_5m": self.md5_5m,
+                "meta": self.meta,
+                "logs": self.logs,
+                "tables": self.tables,
+                "image_cache_size": self.image.cache_size
+                }
+
     def __setstate__(self, state):
+        # Make sure these properties exist (we rely on __init__, because
+        # we want this class to be pickable and __init__ is not called by
+        # `pickle.load`.
+        if not hasattr(self, "_cache_scalar"):
+            self._cache_scalar = {}
+        if not hasattr(self, "h5"):
+            self.h5 = None
+
         self.path = state["path"]
 
         self.md5_5m = state["md5_5m"]
@@ -100,7 +115,10 @@ class HDF5Data:
                         alog = [ll.decode("utf") for ll in alog]
                     self.logs[key] = alog
                 for tab in h5.get("tables", []):
-                    self.tables[tab] = h5["tables"][key][:]
+                    tabdict = {}
+                    for tkey in h5["tables"][tab].dtype.fields.keys():
+                        tabdict[tkey] = h5["tables"][tab][tkey]
+                    self.tables[tab] = tabdict
 
         if state["pixel_size"] is not None:
             self.pixel_size = state["pixel_size"]
@@ -136,15 +154,6 @@ class HDF5Data:
             self.mask = None
 
         self.image_corr = ImageCorrCache(self.image, self.image_bg)
-
-    def __getstate__(self):
-        return {"path": self.path,
-                "pixel_size": self.pixel_size,
-                "md5_5m": self.md5_5m,
-                "meta": self.meta,
-                "logs": self.logs,
-                "tables": self.tables,
-                }
 
     @functools.cache
     def __len__(self):

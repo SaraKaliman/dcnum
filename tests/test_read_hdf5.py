@@ -134,11 +134,8 @@ def test_pickling_state():
 
     h5d1 = read.HDF5Data(path)
     h5d1.pixel_size = 0.124
-    state = h5d1.__getstate__()
-    pstate = pickle.dumps(state)
-
-    state2 = pickle.loads(pstate)
-    h5d2 = read.HDF5Data(**state2)
+    pstate = pickle.dumps(h5d1)
+    h5d2 = pickle.loads(pstate)
     assert h5d1.md5_5m == h5d2.md5_5m
     assert h5d1.md5_5m == h5d2.md5_5m
     assert h5d1.pixel_size == h5d2.pixel_size
@@ -150,10 +147,40 @@ def test_pickling_state_logs():
         data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
     h5d1 = read.HDF5Data(path)
     h5d1.pixel_size = 0.124
-    state = h5d1.__getstate__()
-    pstate = pickle.dumps(state)
-
-    state2 = pickle.loads(pstate)
-    h5d2 = read.HDF5Data(**state2)
+    pstate = pickle.dumps(h5d1)
+    h5d2 = pickle.loads(pstate)
+    assert h5d1.logs
     for lk in h5d1.logs:
         assert h5d1.logs[lk] == h5d2.logs[lk]
+
+
+def test_pickling_state_tables():
+    path = retrieve_data(
+        data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    # The original file does not contain any tables, so we write
+    # generate a table
+    columns = ["alot", "of", "tables"]
+    ds_dt = np.dtype({'names': columns,
+                      'formats': [float] * len(columns)})
+    tab_data = np.zeros((11, len(columns)))
+    tab_data[:, 0] = np.arange(11)
+    tab_data[:, 1] = 1000
+    tab_data[:, 2] = np.linspace(1, np.sqrt(2), 11)
+    rec_arr = np.rec.array(tab_data, dtype=ds_dt)
+
+    # add table to source file
+    with h5py.File(path, "a") as h5:
+        h5tab = h5.require_group("tables")
+        h5tab.create_dataset(name="sample_table",
+                             data=rec_arr)
+
+    h5d1 = read.HDF5Data(path)
+    h5d1.pixel_size = 0.124
+    pstate = pickle.dumps(h5d1)
+    h5d2 = pickle.loads(pstate)
+    assert h5d1.tables
+    table = h5d1.tables["sample_table"]
+    assert len(table) == 3
+    for lk in table:
+        assert np.allclose(h5d1.tables["sample_table"][lk],
+                           h5d2.tables["sample_table"][lk])

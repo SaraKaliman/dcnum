@@ -1,5 +1,7 @@
 0.11.2
  - meta: increment pipeline ID (texture feature computation)
+ - fix: HDF5Data was not pickable
+ - fix: HDF5Data did not properly handle tables
  - enh: add context manager for CPUSegmenter
  - enh: record and log execution time of segmentation and feature extraction
  - enh: properly handle border case for computing contour-moments
