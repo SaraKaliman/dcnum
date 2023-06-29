@@ -1,4 +1,5 @@
 import atexit
+import os
 import shutil
 import tempfile
 import time
@@ -15,3 +16,5 @@ def pytest_configure(config):
     """
     tempfile.tempdir = TMPDIR
     atexit.register(shutil.rmtree, TMPDIR, ignore_errors=True)
+    # Disable JIT compiler during testing for coverage
+    os.environ.setdefault("NUMBA_DISABLE_JIT", "1")
