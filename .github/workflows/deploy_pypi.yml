@@ -26,7 +26,7 @@ jobs:
           twine upload --skip-existing dist/*
 
   build_wheels:
-    name: Build source distribution
+    name: Build wheel
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
