@@ -117,7 +117,7 @@ class HDF5Data:
                 for tab in h5.get("tables", []):
                     tabdict = {}
                     for tkey in h5["tables"][tab].dtype.fields.keys():
-                        tabdict[tkey] = h5["tables"][tab][tkey]
+                        tabdict[tkey] = np.squeeze(h5["tables"][tab][tkey])
                     self.tables[tab] = tabdict
 
         if state["pixel_size"] is not None:
