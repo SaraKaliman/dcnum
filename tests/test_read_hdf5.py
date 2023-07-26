@@ -184,3 +184,13 @@ def test_pickling_state_tables():
     for lk in table:
         assert np.allclose(h5d1.tables["sample_table"][lk],
                            h5d2.tables["sample_table"][lk])
+
+
+def test_read_empty_logs():
+    path = retrieve_data(
+        data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    with h5py.File(path, "a") as h5:
+        h5.require_group("logs").create_dataset(name="empty_log",
+                                                data=[])
+    h5r = read.HDF5Data(path)
+    assert "empty_log" not in h5r.logs

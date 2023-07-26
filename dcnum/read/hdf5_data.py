@@ -111,9 +111,10 @@ class HDF5Data:
                         self.meta[key] = self.meta[key].decode("utf-8")
                 for key in h5.get("logs", []):
                     alog = list(h5["logs"][key])
-                    if isinstance(alog[0], bytes):
-                        alog = [ll.decode("utf") for ll in alog]
-                    self.logs[key] = alog
+                    if alog:
+                        if isinstance(alog[0], bytes):
+                            alog = [ll.decode("utf") for ll in alog]
+                        self.logs[key] = alog
                 for tab in h5.get("tables", []):
                     tabdict = {}
                     for tkey in h5["tables"][tab].dtype.fields.keys():
