@@ -188,7 +188,7 @@ class QueueCollectorThread(threading.Thread):
 
             # We have reached the writer threshold. This means the extractor
             # has analyzed at least `write_threshold` frames (not events).
-            self.logger.debug(f"Current frane: {cur_frame}")
+            self.logger.debug(f"Current frame: {cur_frame}")
 
             # Create an event stash
             stash = EventStash(
