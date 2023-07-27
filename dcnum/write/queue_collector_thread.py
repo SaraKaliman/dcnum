@@ -183,7 +183,9 @@ class QueueCollectorThread(threading.Thread):
                 continue
 
             if len(cur_nevents) == 0:
-                self.logger.warning("Encountered empty nevents array!")
+                self.logger.info(
+                    "Reached the end of the current dataset (frame "
+                    f"{cur_frame + 1} of {self.feat_nevents.size}).")
                 break
 
             # We have reached the writer threshold. This means the extractor
@@ -254,6 +256,8 @@ class QueueCollectorThread(threading.Thread):
 
             # Write the number of events.
             self.writer_dq.append(("nevents",
+                                   # Get nevents for each event from the
+                                   # frame-based cur_nevents array.
                                    np.array(stash.feat_nevents)[
                                        indices - stash.index_offset]
                                    ))
@@ -262,4 +266,4 @@ class QueueCollectorThread(threading.Thread):
             self.written_frames += stash.num_frames
 
             # Increment current frame index.
-            cur_frame += self.write_threshold
+            cur_frame += len(cur_nevents)
