@@ -257,7 +257,21 @@ class QueueEventExtractor:
                 if self.finalize_extraction.value:
                     # The manager told us that there is nothing more coming.
                     self.logger.debug(
-                        f"Finalizing worker {self} with PID {os.getpid()}")
+                        f"Finalizing worker {self} with PID {os.getpid()}. "
+                        f"{self.event_queue.qsize()} events are still queued.")
+                    # Tell the queue background thread to flush all data to
+                    # the queue. The background thread will quit once it has
+                    # flushed all buffered data to the pipe.
+                    self.event_queue.close()
+                    self.logger.debug(
+                        f"Closed event queue from Process PID {os.getpid()}")
+                    # Join the queue background thread. It blocks until the
+                    # background thread exits, ensuring that all data in the
+                    # buffer has been flushed to the pipe.
+                    self.event_queue.join_thread()
+                    self.logger.debug(
+                        f"Joined event queue background thread from"
+                        f"Process PID {os.getpid()}")
                     break
             else:
                 try:
