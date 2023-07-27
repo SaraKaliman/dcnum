@@ -214,6 +214,7 @@ class QueueCollectorThread(threading.Thread):
                 try:
                     idx, events = self.event_queue.get(timeout=.3)
                 except queue.Empty:
+                    # No time.sleep here, because we are using timeout above.
                     continue
                 if cur_frame <= idx < cur_frame + self.write_threshold:
                     stash.add_events(index=idx, events=events)
