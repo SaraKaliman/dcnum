@@ -185,7 +185,7 @@ class QueueCollectorThread(threading.Thread):
             if len(cur_nevents) == 0:
                 self.logger.info(
                     "Reached the end of the current dataset (frame "
-                    f"{cur_frame + 1} of {self.feat_nevents.size}).")
+                    f"{cur_frame + 1} of {len(self.feat_nevents)}).")
                 break
 
             # We have reached the writer threshold. This means the extractor
