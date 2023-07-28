@@ -287,6 +287,7 @@ class QueueEventExtractor:
                     else:
                         self.feat_nevents[index] = 0
                     self.event_queue.put((index, events))
+        self.logger.debug(f"End of `run` for PID {os.getpid()}, {self}")
 
 
 class EventExtractorProcess(QueueEventExtractor, mp.Process):
