@@ -1,3 +1,5 @@
+0.11.8
+ - reg: do not close the background thread of the event queue
 0.11.7
  - enh: add more debugging messages for feature extraction workers
 0.11.6
