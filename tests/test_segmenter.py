@@ -1,9 +1,15 @@
 import pathlib
+import types
+
+import pytest
 
 from dcnum import segm
+from dcnum.meta import ppid
 import numpy as np
 
 data_path = pathlib.Path(__file__).parent / "data"
+SEGM_METH = segm.get_available_segmenters()
+SEGM_KEYS = sorted(SEGM_METH.keys())
 
 
 class MockImageData:
@@ -223,3 +229,18 @@ def test_cpu_segmenter_getsetstate():
         # and here we test for the raw data that was transferred
         assert not np.all(sm1.image_array == sm2.image_array)
         assert np.all(sm1.mp_image_raw == sm2.mp_image_raw)
+
+
+@pytest.mark.parametrize("segm_method", SEGM_KEYS)
+def test_ppid_no_union_kwonlykwargs(segm_method):
+    """Segmenters should define kw-only keyword arguements clear type hint
+
+    This test makes sure that no `UnionType` is used
+    (e.g. `str | pathlib.Path`).
+    """
+    segm_cls = SEGM_METH[segm_method]
+    meta = ppid.get_class_method_info(segm_cls,
+                                      static_kw_methods=["segment_approach"])
+    annot = meta["annotations"]["segment_approach"]
+    for key in annot:
+        assert not isinstance(annot[key], types.UnionType), segm_method
