@@ -186,6 +186,34 @@ def test_pickling_state_tables():
                            h5d2.tables["sample_table"][lk])
 
 
+def test_table_with_length_one():
+    path = retrieve_data(
+        data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    # The original file does not contain any tables, so we write
+    # generate a table
+    columns = ["alot", "of", "tables"]
+    ds_dt = np.dtype({'names': columns,
+                      'formats': [float] * len(columns)})
+    tab_data = np.zeros((1, len(columns)))
+    tab_data[:, 0] = np.arange(1)
+    tab_data[:, 1] = 1000
+    tab_data[:, 2] = 3
+    rec_arr = np.rec.array(tab_data, dtype=ds_dt)
+
+    # add table to source file
+    with h5py.File(path, "a") as h5:
+        h5tab = h5.require_group("tables")
+        h5tab.create_dataset(name="sample_table",
+                             data=rec_arr)
+
+    h5d1 = read.HDF5Data(path)
+    h5d1.pixel_size = 0.124
+    assert h5d1.tables
+    table = h5d1.tables["sample_table"]
+    assert len(table) == 3
+    assert h5d1.tables["sample_table"]["alot"].shape == (1,)
+
+
 def test_read_empty_logs():
     path = retrieve_data(
         data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
