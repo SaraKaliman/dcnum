@@ -11,9 +11,8 @@ from .segmenter import Segmenter
 class GPUSegmenter(Segmenter, abc.ABC):
     mask_postprocessing = False
 
-    def __init__(self, model_file=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(GPUSegmenter, self).__init__(*args, **kwargs)
-        self.model_path = self._get_model_path(model_file)
 
     @staticmethod
     def _get_model_path(model_file):
