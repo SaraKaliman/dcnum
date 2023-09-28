@@ -32,11 +32,11 @@ jobs:
     - name: List installed packages
       run: |
         pip freeze
+    - name: Lint with flake8
+      run: |
+        flake8 --exclude _version.py .
     - name: Test with pytest
       run: |
         coverage run --source=dcnum -m pytest tests
-    - name: Lint with flake8
-      run: |
-        flake8 .
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
