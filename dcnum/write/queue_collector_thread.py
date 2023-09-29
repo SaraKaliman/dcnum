@@ -210,22 +210,26 @@ class QueueCollectorThread(threading.Thread):
                     # or some of the workers being slower/faster).
                     self.buffer_dq.append((idx, events))
 
-            # Now, get the data from the queue until we have everything
-            # that belongs to our chunk (this might also populate buffer_dq).
-            while True:
-                try:
-                    idx, events = self.event_queue.get(timeout=.3)
-                except queue.Empty:
-                    # No time.sleep here, because we are using timeout above.
-                    continue
-                if cur_frame <= idx < cur_frame + self.write_threshold:
-                    stash.add_events(index=idx, events=events)
-                else:
-                    # Goes onto the buffer stack (might happen if some other
-                    # processes were faster)
-                    self.buffer_dq.append((idx, events))
-                if stash.is_complete():
-                    break
+            if not stash.is_complete():
+                # Now, get the data from the queue until we have everything
+                # that belongs to our chunk (this might also populate
+                # buffer_dq).
+                while True:
+                    try:
+                        idx, events = self.event_queue.get(timeout=.3)
+                    except queue.Empty:
+                        # No time.sleep here, because we are already using
+                        # a timeout in event_queue.get.
+                        continue
+                    if cur_frame <= idx < cur_frame + self.write_threshold:
+                        stash.add_events(index=idx, events=events)
+                    else:
+                        # Goes onto the buffer stack (might happen if a
+                        # segmentation process was fast and got an event
+                        # from the next slice (context: write_threshold))
+                        self.buffer_dq.append((idx, events))
+                    if stash.is_complete():
+                        break
 
             # Send the data from the stash to the writer. The stash has
             # already put everything into the correct order.
