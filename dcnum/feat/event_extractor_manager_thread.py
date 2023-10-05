@@ -133,6 +133,13 @@ class EventExtractorManagerThread(threading.Thread):
             if chunks_processed == self.data.image.num_chunks:
                 break
 
+        self.logger.debug("Waiting for event_queue to empty.")
+        # Wait until the event queue is empty.
+        event_queue = self.fe_kwargs["event_queue"]
+        while not event_queue.empty():
+            # The collector thread is still sorting things out. Wait
+            # before joining the threads.
+            time.sleep(.1)
         self.logger.debug("Requesting extraction workers to join.")
         self.fe_kwargs["finalize_extraction"].value = True
         [w.join() for w in workers]
