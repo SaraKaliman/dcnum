@@ -236,7 +236,7 @@ class QueueEventExtractor:
 
     def run(self):
         """Main loop of worker process"""
-        # Don't wait for queues when joining workers
+        # Don't wait for these two queues when joining workers
         self.raw_queue.cancel_join_thread()
         self.log_queue.cancel_join_thread()
         #: logger sends all logs to `self.log_queue`
@@ -274,7 +274,16 @@ class QueueEventExtractor:
                     else:
                         self.feat_nevents[index] = 0
                     self.event_queue.put((index, events))
+
+        self.logger.debug(f"Finalizing `run` for PID {os.getpid()}, {self}")
+        # Explicitly close the event queue and join it
+        self.event_queue.close()
+        self.event_queue.join_thread()
         self.logger.debug(f"End of `run` for PID {os.getpid()}, {self}")
+        # Also close the logging queue. Not that not all messages might
+        # arrive in the logging queue, since we called `cancel_join_thread`
+        # earlier.
+        self.log_queue.close()
 
 
 class EventExtractorProcess(QueueEventExtractor, mp.Process):
