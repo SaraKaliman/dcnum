@@ -25,15 +25,18 @@ class CPUSegmenter(Segmenter, abc.ABC):
         # Image shape of the input array
         self.image_shape = None
         # Processing control values
+        # The batch worker number helps to communicate with workers.
         # <-1: exit
         # -1: idle
         # 0: start
-        # >0: this number workers finished a batch
+        # >0: this number of workers finished a batch
         self.mp_batch_worker = mp_spawn.Value("i", 0)
         # The iteration of the process (increment to wake workers)
-        self.mp_batch_index = mp_spawn.Value("i", -1)
+        # (raw value, because only this thread changes it)
+        self.mp_batch_index = mp_spawn.RawValue("i", -1)
         # Tells the workers to stop
-        self.mp_shutdown = mp_spawn.Value("i", 0)
+        # (raw value, because only this thread changes it)
+        self.mp_shutdown = mp_spawn.RawValue("i", 0)
 
     def __enter__(self):
         return self
