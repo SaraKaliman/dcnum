@@ -1,12 +1,16 @@
 import abc
 import multiprocessing as mp
-# import os
 import time
 import threading
 
 import numpy as np
 
 from .segmenter import Segmenter
+
+
+# All subprocesses should use 'spawn' to avoid issues with threads
+# and 'fork' on POSIX systems.
+mp_spawn = mp.get_context('spawn')
 
 
 class CPUSegmenter(Segmenter, abc.ABC):
@@ -25,11 +29,11 @@ class CPUSegmenter(Segmenter, abc.ABC):
         # -1: idle
         # 0: start
         # >0: this number workers finished a batch
-        self.mp_batch_index = mp.Value("i", -1)
+        self.mp_batch_worker = mp_spawn.Value("i", 0)
         # The iteration of the process (increment to wake workers)
-        self.mp_batch_worker = mp.Value("i", 0)
+        self.mp_batch_index = mp_spawn.Value("i", -1)
         # Tells the workers to stop
-        self.mp_shutdown = mp.Value("i", 0)
+        self.mp_shutdown = mp_spawn.Value("i", 0)
 
     def __enter__(self):
         return self
@@ -71,7 +75,7 @@ class CPUSegmenter(Segmenter, abc.ABC):
             or `np.ctypeslib.ctypes.c_bool`
         """
         sx, sy = image_shape
-        sa_raw = mp.RawArray(dtype, int(sx * sy * batch_size))
+        sa_raw = mp_spawn.RawArray(dtype, int(sx * sy * batch_size))
         # Convert the RawArray to something we can write to fast
         # (similar to memory view, but without having to cast) using
         # np.ctypeslib.as_array. See discussion in
@@ -264,7 +268,7 @@ class CPUSegmenterWorker:
                 time.sleep(.01)
 
 
-class CPUSegmenterWorkerProcess(CPUSegmenterWorker, mp.Process):
+class CPUSegmenterWorkerProcess(CPUSegmenterWorker, mp_spawn.Process):
     def __init__(self, *args, **kwargs):
         super(CPUSegmenterWorkerProcess, self).__init__(*args, **kwargs)
 

@@ -10,6 +10,11 @@ from scipy import ndimage
 from .base import Background
 
 
+# All subprocesses should use 'spawn' to avoid issues with threads
+# and 'fork' on POSIX systems.
+mp_spawn = mp.get_context('spawn')
+
+
 class BackgroundRollMed(Background):
     def __init__(self, input_data, output_path, kernel_size=100,
                  batch_size=10000, compress=True, num_cpus=None):
@@ -71,11 +76,11 @@ class BackgroundRollMed(Background):
         #: total number of events
         self.event_count = len(self.input_data)
         #: mp.RawArray for temporary batch input data
-        self.shared_input_raw = mp.RawArray(
+        self.shared_input_raw = mp_spawn.RawArray(
             np.ctypeslib.ctypes.c_uint8,
             int(np.prod(self.image_shape)) * (batch_size + kernel_size))
         #: mp.RawArray for temporary batch output data
-        self.shared_output_raw = mp.RawArray(
+        self.shared_output_raw = mp_spawn.RawArray(
             np.ctypeslib.ctypes.c_uint8,
             int(np.prod(self.image_shape)) * batch_size)
         # Convert the RawArray to something we can write to fast
@@ -94,9 +99,9 @@ class BackgroundRollMed(Background):
         self.current_batch = 0
 
         #: counter tracking process of workers
-        self.worker_counter = mp.Value("l", 0)
+        self.worker_counter = mp_spawn.Value("l", 0)
         #: queue for median computation jobs
-        self.queue = mp.Queue()
+        self.queue = mp_spawn.Queue()
         #: list of workers (processes)
         self.workers = [MedianWorker(self.queue,
                                      self.worker_counter,
@@ -241,7 +246,7 @@ class BackgroundRollMed(Background):
         self.current_batch += 1
 
 
-class MedianWorker(mp.Process):
+class MedianWorker(mp_spawn.Process):
     def __init__(self, job_queue, counter, shared_input, shared_output,
                  batch_size, kernel_size, *args, **kwargs):
         """Worker process for median computation"""

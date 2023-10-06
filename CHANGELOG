@@ -1,3 +1,6 @@
+0.12.0
+ - ref: always use "spawn" for creating new processes to avoid race
+   conditions with Python threading.Lock upon forking on POSIX
 0.11.13
  - enh: wait for event queue to empty before attempting to join
    QueueEventExtractor processes

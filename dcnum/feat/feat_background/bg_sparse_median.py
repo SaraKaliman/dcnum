@@ -13,6 +13,11 @@ from .base import Background
 logger = logging.getLogger(__name__)
 
 
+# All subprocesses should use 'spawn' to avoid issues with threads
+# and 'fork' on POSIX systems.
+mp_spawn = mp.get_context('spawn')
+
+
 class BackgroundSparseMed(Background):
     def __init__(self, input_data, output_path, kernel_size=200,
                  split_time=1., thresh_cleansing=0, frac_cleansing=.8,
@@ -124,11 +129,11 @@ class BackgroundSparseMed(Background):
                                   dtype=np.uint8)
 
         #: mp.RawArray for temporary batch input data
-        self.shared_input_raw = mp.RawArray(
+        self.shared_input_raw = mp_spawn.RawArray(
             np.ctypeslib.ctypes.c_uint8,
             int(np.prod(self.image_shape)) * kernel_size)
         #: mp.RawArray for the median background image
-        self.shared_output_raw = mp.RawArray(
+        self.shared_output_raw = mp_spawn.RawArray(
             np.ctypeslib.ctypes.c_uint8,
             int(np.prod(self.image_shape)))
         # Convert the RawArray to something we can write to fast
@@ -142,12 +147,12 @@ class BackgroundSparseMed(Background):
         self.shared_output = np.ctypeslib.as_array(
             self.shared_output_raw).reshape(self.image_shape)
         #: multiprocessing pool for parallel processing
-        self.pool = mp.Pool(processes=self.num_cpus)
+        self.pool = mp_spawn.Pool(processes=self.num_cpus)
 
         #: counter tracking process of workers
-        self.worker_counter = mp.Value("l", 0)
+        self.worker_counter = mp_spawn.Value("l", 0)
         #: queue for median computation jobs
-        self.queue = mp.Queue()
+        self.queue = mp_spawn.Queue()
         #: list of workers (processes)
         self.workers = [MedianWorkerSingle(self.queue,
                                            self.worker_counter,
@@ -362,7 +367,7 @@ class BackgroundSparseMed(Background):
         self.bg_images[ii] = self.shared_output.reshape(self.image_shape)
 
 
-class MedianWorkerSingle(mp.Process):
+class MedianWorkerSingle(mp_spawn.Process):
     def __init__(self, job_queue, counter, shared_input, shared_output,
                  kernel_size, *args, **kwargs):
         """Worker process for median computation"""

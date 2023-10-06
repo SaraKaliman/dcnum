@@ -18,6 +18,11 @@ from .feat_texture import haralick_texture_features
 from .gate import Gate
 
 
+# All subprocesses should use 'spawn' to avoid issues with threads
+# and 'fork' on POSIX systems.
+mp_spawn = mp.get_context('fork')
+
+
 class QueueEventExtractor:
     def __init__(self,
                  data: HDF5Data,
@@ -115,9 +120,9 @@ class QueueEventExtractor:
         - It simplifies testing.
         """
         # queue with the raw (unsegmented) image data
-        raw_queue = mp.Queue()
+        raw_queue = mp_spawn.Queue()
         # queue with event-wise feature dictionaries
-        event_queue = mp.Queue()
+        event_queue = mp_spawn.Queue()
 
         args = collections.OrderedDict()
         args["data"] = data
@@ -127,13 +132,13 @@ class QueueEventExtractor:
         args["raw_queue"] = raw_queue
         args["event_queue"] = event_queue
         args["log_queue"] = log_queue
-        args["feat_nevents"] = mp.Array("i", len(data))
+        args["feat_nevents"] = mp_spawn.Array("i", len(data))
         args["feat_nevents"][:] = np.full(len(data), -1)
         # "h" is signed short (np.int16)
-        args["label_array"] = mp.RawArray(
+        args["label_array"] = mp_spawn.RawArray(
             np.ctypeslib.ctypes.c_int16,
             int(np.product(data.image.chunk_shape)))
-        args["finalize_extraction"] = mp.Value("b", False)
+        args["finalize_extraction"] = mp_spawn.Value("b", False)
         return args
 
     @classmethod
@@ -286,7 +291,7 @@ class QueueEventExtractor:
         self.log_queue.close()
 
 
-class EventExtractorProcess(QueueEventExtractor, mp.Process):
+class EventExtractorProcess(QueueEventExtractor, mp_spawn.Process):
     """Multiprocessing worker for regular segmentation and extraction"""
     def __init__(self, *args, **kwargs):
         super(EventExtractorProcess, self).__init__(
