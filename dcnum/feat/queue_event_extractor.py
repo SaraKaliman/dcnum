@@ -20,7 +20,7 @@ from .gate import Gate
 
 # All subprocesses should use 'spawn' to avoid issues with threads
 # and 'fork' on POSIX systems.
-mp_spawn = mp.get_context('fork')
+mp_spawn = mp.get_context("spawn")
 
 
 class QueueEventExtractor:
