@@ -181,7 +181,16 @@ class QueueEventExtractor:
         else:
             gated_events = events
 
-        return gated_events
+        # removing events with invalid legacy features
+        valid_events = {}
+        valid = gated_events.pop("valid")
+        if not np.all(valid):
+            for key in gated_events:
+                valid_events[key] = gated_events[key][valid]
+        else:
+            valid_events = gated_events
+
+        return valid_events
 
     def get_masks_from_label(self, label):
         """Get masks, performing mask-based gating"""
