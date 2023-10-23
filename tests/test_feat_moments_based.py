@@ -88,6 +88,24 @@ def test_mask_1d():
     assert np.isnan(data["area_um"][0])
 
 
+def test_mask_1d_large():
+    masks = np.array([
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+    ], dtype=bool)[np.newaxis]
+    data = feat_moments.moments_based_features(
+                mask=masks,
+                pixel_size=0.2645
+            )
+    assert data["deform"].shape == (1,)
+    assert np.isnan(data["deform"][0])
+    assert np.isnan(data["area_um"][0])
+
+
 def test_mask_2d():
     masks = np.array([
         [0, 0, 0, 0, 0, 0],
@@ -106,3 +124,31 @@ def test_mask_2d():
     assert np.allclose(data["deform"][0], 0.11377307454724206)
     # Without moments-based computation, this would be 4*pxsize=0.066125
     assert np.allclose(data["area_um"][0], 0.06996025)
+
+
+def test_mask_mixed():
+    mask_valid = np.array([
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 0, 0],
+        [0, 0, 1, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+    ], dtype=bool)
+    mask_invalid = np.array([
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+    ], dtype=bool)
+    mixed_masks = np.append(mask_valid[None, ...],
+                            mask_invalid[None, ...], axis=0)
+    data = feat_moments.moments_based_features(
+                mask=mixed_masks,
+                pixel_size=0.2645)
+    assert data["deform"].shape == (2,)
+    assert np.all(data["valid"][:] == np.array([True, False]))
+    assert not np.isnan(data["deform"][0])
+    assert np.isnan(data["deform"][1])

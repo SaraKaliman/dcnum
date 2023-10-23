@@ -1,3 +1,5 @@
+0.12.1
+ - fix: feature computation produces nan-features
 0.12.0
  - ref: always use "spawn" for creating new processes to avoid race
    conditions with Python threading.Lock upon forking on POSIX
