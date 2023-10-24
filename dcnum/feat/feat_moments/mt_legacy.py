@@ -24,10 +24,16 @@ def moments_based_features(mask, pixel_size):
     inert_ratio_cvx = np.copy(empty)
     inert_ratio_raw = np.copy(empty)
     inert_ratio_prnc = np.copy(empty)
+    # The following valid-array is not a real feature, but only
+    # used to figure out which events need to be removed due
+    # to invalid computed features, often due to invalid contours.
+    valid = np.full(size, False)
 
     for ii in range(size):
         cont_raw = contour_single_opencv(mask[ii])
         if len(cont_raw.shape) < 2:
+            continue
+        if cv2.contourArea(cont_raw) == 0:
             continue
         mu_raw = cv2.moments(cont_raw)
 
@@ -89,6 +95,7 @@ def moments_based_features(mask, pixel_size):
         root_prnc = mprnc["mu20"] / mprnc["mu02"]
         if root_prnc > 0:  # defaults to zero
             inert_ratio_prnc[ii] = np.sqrt(root_prnc)
+        valid[ii] = True
 
     return {
         "deform": deform,
@@ -104,4 +111,5 @@ def moments_based_features(mask, pixel_size):
         "inert_ratio_cvx": inert_ratio_cvx,
         "inert_ratio_raw": inert_ratio_raw,
         "inert_ratio_prnc": inert_ratio_prnc,
+        "valid": valid,
     }
