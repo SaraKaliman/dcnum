@@ -106,6 +106,26 @@ def test_mask_1d_large():
     assert np.isnan(data["area_um"][0])
 
 
+def test_mask_1d_large_no_border():
+    masks = np.array([
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+    ], dtype=bool)[np.newaxis]
+    data = feat_moments.moments_based_features(
+                mask=masks,
+                pixel_size=0.2645
+            )
+    assert data["deform"].shape == (1,)
+    assert np.isnan(data["deform"][0])
+    assert np.isnan(data["area_um"][0])
+
+
 def test_mask_2d():
     masks = np.array([
         [0, 0, 0, 0, 0, 0],

@@ -183,8 +183,18 @@ class QueueEventExtractor:
 
         # removing events with invalid legacy features
         valid_events = {}
+        # the valid key-value pair was added in `moments_based_features` and
+        # its only purpose is to mark events with invalid contours as such,
+        # so they can be removed here. Resolves issue #9.
         valid = gated_events.pop("valid")
-        if not np.all(valid):
+        invalid = ~valid
+        # The following might lead to a computational overhead, if only a few
+        # events are invalid, because then all 2d-features need to be copied
+        # over from gated_events to valid_events. According to our experience
+        # invalid events happen rarely though.
+        if np.any(invalid):
+            self.logger.info(f"Discarded {np.sum(invalid)} events due to "
+                             "invalid segmentation.")
             for key in gated_events:
                 valid_events[key] = gated_events[key][valid]
         else:

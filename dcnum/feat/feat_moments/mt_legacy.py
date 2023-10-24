@@ -24,6 +24,9 @@ def moments_based_features(mask, pixel_size):
     inert_ratio_cvx = np.copy(empty)
     inert_ratio_raw = np.copy(empty)
     inert_ratio_prnc = np.copy(empty)
+    # The following valid-array is not a real feature, but only
+    # used to figure out which events need to be removed due
+    # to invalid computed features, often due to invalid contours.
     valid = np.full(size, False)
 
     for ii in range(size):
