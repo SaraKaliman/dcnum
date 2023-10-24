@@ -144,7 +144,7 @@ class QueueEventExtractor:
     @classmethod
     def get_ppid_from_kwargs(cls, kwargs):
         """Return the pipeline ID for this event extractor"""
-        key = ""
+        key = "legacy"
         cback = kwargs_to_ppid(cls, "get_events_from_masks", kwargs)
         return ":".join([key, cback])
 
