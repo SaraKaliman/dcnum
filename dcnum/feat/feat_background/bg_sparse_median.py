@@ -330,7 +330,7 @@ class BackgroundSparseMed(Background):
         idx_start = np.argmin(np.abs(second - self.time))
         idx_stop = idx_start + self.kernel_size
         if idx_stop >= self.event_count:
-            diff = idx_stop - self.event_count
+            diff = min(0, idx_stop - self.event_count)
             idx_stop -= diff
             idx_start -= diff
             assert idx_start >= 0
