@@ -42,7 +42,7 @@ def moments_based_features(mask, pixel_size):
 
     for ii in range(size):
         # raw contour
-        cont_raw = contour_single_opencv(mask[ii]).astype("float32")
+        cont_raw = contour_single_opencv(mask[ii])
         if len(cont_raw.shape) < 2:
             continue
         if cv2.contourArea(cont_raw) == 0:
@@ -54,7 +54,7 @@ def moments_based_features(mask, pixel_size):
         event_mask = mask[ii]
 
         # convex hull
-        cont_cvx = np.squeeze(np.int64(cv2.convexHull(cont_raw)))
+        cont_cvx = np.squeeze(cv2.convexHull(cont_raw))
         mu_cvx = cv2.moments(cont_cvx)
         arc_hull = np.float64(cv2.arcLength(cont_cvx, True))
         # circ
